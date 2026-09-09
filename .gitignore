@@ -4,3 +4,6 @@ venv
 venv/
 __pycache__/
 .pytest_cache/
+
+# Antigravity Documentation
+*DOCUMENTATION_ANTIGRAVITY.MD
