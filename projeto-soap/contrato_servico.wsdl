@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<wsdl:definitions xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:plink="http://schemas.xmlsoap.org/ws/2003/05/partner-link/" 
+    xmlns:wsdlsoap11="http://schemas.xmlsoap.org/wsdl/soap/" 
+    xmlns:wsdlsoap12="http://schemas.xmlsoap.org/wsdl/soap12/" 
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:soap11enc="http://schemas.xmlsoap.org/soap/encoding/" 
+    xmlns:soap11env="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:soap12env="http://www.w3.org/2003/05/soap-envelope" 
+    xmlns:soap12enc="http://www.w3.org/2003/05/soap-encoding" 
+    xmlns:wsa="http://schemas.xmlsoap.org/ws/2003/03/addressing" 
+    xmlns:xop="http://www.w3.org/2004/08/xop/include" 
+    xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
+    xmlns:tns="clinica.soap" 
+    targetNamespace="clinica.soap" 
+    name="Application">
+<wsdl:types>
+
+<xs:schema targetNamespace="clinica.soap" elementFormDefault="qualified">
+
+<xs:complexType name="ProntuarioModel">
+
+<xs:sequence><xs:element name="paciente" type="xs:string" minOccurs="0" nillable="true"/>
+
+<xs:element name="status" type="xs:string" minOccurs="0" nillable="true"/>
+<xs:element name="mensagem_erro" type="xs:string" minOccurs="0" nillable="true"/>
+
+</xs:sequence>
+</xs:complexType>
+<xs:complexType name="get_paciente">
+<xs:sequence>
+<xs:element name="id_paciente" type="xs:integer" minOccurs="0" nillable="true"/>
+</xs:sequence></xs:complexType><xs:complexType name="get_pacienteResponse">
+<xs:sequence>
+<xs:element name="get_pacienteResult" type="tns:ProntuarioModel" minOccurs="0" nillable="true"/>
+</xs:sequence>
+</xs:complexType><xs:element name="ProntuarioModel" type="tns:ProntuarioModel"/>
+<xs:element name="get_paciente" type="tns:get_paciente"/>
+<xs:element name="get_pacienteResponse" type="tns:get_pacienteResponse"/>
+</xs:schema>
+</wsdl:types>
+<wsdl:message name="get_paciente">
+<wsdl:part name="get_paciente" element="tns:get_paciente"/>
+</wsdl:message>
+<wsdl:message name="get_pacienteResponse">
+<wsdl:part name="get_pacienteResponse" element="tns:get_pacienteResponse"/>
+</wsdl:message>
+<wsdl:service name="ProntuarioService">
+<wsdl:port name="Application" binding="tns:Application">
+<wsdlsoap11:address location="http://127.0.0.1:8000/"/>
+</wsdl:port>
+</wsdl:service>
+<wsdl:portType name="Application">
+<wsdl:operation name="get_paciente" parameterOrder="get_paciente">
+<wsdl:input name="get_paciente" message="tns:get_paciente"/>
+<wsdl:output name="get_pacienteResponse" message="tns:get_pacienteResponse"/>
+</wsdl:operation>
+</wsdl:portType>
+<wsdl:binding name="Application" type="tns:Application">
+<wsdlsoap11:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+<wsdl:operation name="get_paciente">
+<wsdlsoap11:operation soapAction="get_paciente" style="document"/>
+<wsdl:input name="get_paciente">
+<wsdlsoap11:body use="literal"/>
+</wsdl:input><wsdl:output name="get_pacienteResponse">
+<wsdlsoap11:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+</wsdl:binding>
+</wsdl:definitions>
