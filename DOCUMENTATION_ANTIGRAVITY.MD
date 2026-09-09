@@ -35,7 +35,7 @@ func soma(c *gin.Context) {
 ...
 // Corrigido no main()
 router.GET("/soma/:a/:b", soma)
-
+```
 
 ---
 
@@ -232,4 +232,3 @@ Existem três opções para resolver esse impasse:
   git pull origin main
   git push origin main
   ```
-
