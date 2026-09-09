@@ -1,0 +1,199 @@
+basePath: /
+definitions:
+  dto.UserDTO:
+    properties:
+      hash_pass:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+    required:
+    - nome
+    type: object
+  model.User:
+    properties:
+      id:
+        type: integer
+      nome:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Esta é uma API de exemplo utilizando Gin e Swagger.
+  title: Projeto REST API
+  version: "1.0"
+paths:
+  /ping:
+    get:
+      description: Responde com pong
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Ping
+      tags:
+      - System
+  /soma/:a/:b:
+    get:
+      description: Soma dois números inteiros
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      summary: Soma
+      tags:
+      - Math
+  /users:
+    get:
+      description: Retorna uma lista de todos os usuários cadastrados
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.User'
+            type: array
+      summary: Listar todos os usuários
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Cria um novo usuário na base de dados
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Criar um usuário
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      description: Remove um usuário existente pelo ID
+      parameters:
+      - description: ID do Usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Deletar um usuário
+      tags:
+      - Users
+    get:
+      description: Busca um único usuário pelo ID fornecido
+      parameters:
+      - description: ID do Usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Buscar usuário por ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados de um usuário existente
+      parameters:
+      - description: ID do Usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados do usuário para atualizar
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualizar um usuário
+      tags:
+      - Users
+swagger: "2.0"
