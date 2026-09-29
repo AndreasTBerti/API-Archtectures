@@ -1,0 +1,11 @@
+[project]
+name = "projeto-soap"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"  # spyne 2.14 (six 1.14 vendorizado) quebra no 3.12+
+dependencies = [
+    "spyne>=2.14.0",
+    "streamlit>=1.64.0",
+    "zeep>=4.3.3",
+]

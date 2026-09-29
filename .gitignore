@@ -6,4 +6,5 @@ __pycache__/
 .pytest_cache/
 
 # Antigravity Documentation
-*DOCUMENTATION_ANTIGRAVITY.MD
+*DOCUMENTATION_ANTIGRAVITY.MD
+API Arche

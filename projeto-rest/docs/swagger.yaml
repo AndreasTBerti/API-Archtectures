@@ -1,15 +1,415 @@
 basePath: /
 definitions:
+  dto.AdmissaoDTO:
+    properties:
+      acompanhante:
+        type: string
+      convenio:
+        type: string
+      forma_chegada:
+        enum:
+        - andando
+        - cadeira_rodas
+        - maca
+        - ambulancia
+        example: andando
+        type: string
+      observacoes:
+        type: string
+      queixa_principal:
+        type: string
+    required:
+    - forma_chegada
+    - queixa_principal
+    type: object
+  dto.ComentarioMovimentacao:
+    properties:
+      comentario:
+        type: string
+      movimentacao_id:
+        type: integer
+    type: object
+  dto.ConsultaDTO:
+    properties:
+      anamnese:
+        type: string
+      diagnostico:
+        type: string
+      encaminhamento:
+        type: string
+      exames_solicitados:
+        type: string
+      observacoes:
+        type: string
+      prescricao:
+        type: string
+      retorno:
+        example: "2026-10-05"
+        type: string
+    required:
+    - anamnese
+    - diagnostico
+    type: object
+  dto.FinalizarDTO:
+    properties:
+      comentario:
+        type: string
+      comentarios:
+        items:
+          $ref: '#/definitions/dto.ComentarioMovimentacao'
+        type: array
+    type: object
+  dto.LoginDTO:
+    properties:
+      nome:
+        type: string
+      senha:
+        type: string
+    required:
+    - nome
+    - senha
+    type: object
+  dto.OAuthError:
+    properties:
+      error:
+        example: invalid_grant
+        type: string
+      error_description:
+        type: string
+    type: object
+  dto.PacienteDTO:
+    properties:
+      nome:
+        example: Ana Maria
+        type: string
+      status:
+        example: em observação
+        type: string
+    required:
+    - nome
+    type: object
+  dto.PreviaFinalizacao:
+    properties:
+      fim:
+        type: string
+      inicio:
+        type: string
+      movimentacoes:
+        items:
+          $ref: '#/definitions/model.Movimentacao'
+        type: array
+      pacientes:
+        type: integer
+      totais:
+        additionalProperties:
+          type: integer
+        description: Quantas movimentações de cada tipo (chegada, triagem, consulta...)
+        type: object
+    type: object
+  dto.ResumoPassagem:
+    properties:
+      data:
+        example: "2026-09-10"
+        type: string
+      diagnostico:
+        type: string
+      encaminhamento:
+        type: string
+      exames_solicitados:
+        type: string
+      passagem_id:
+        type: integer
+      peso:
+        type: number
+      prescricao:
+        type: string
+      pressao_arterial:
+        type: string
+      prioridade:
+        type: string
+      queixa_principal:
+        type: string
+      retorno:
+        type: string
+      saturacao_o2:
+        type: integer
+      sintomas:
+        type: string
+      temperatura:
+        type: number
+    type: object
+  dto.ResumoResponse:
+    properties:
+      gerado_por:
+        example: regras
+        type: string
+      paciente_id:
+        type: integer
+      passagens:
+        items:
+          $ref: '#/definitions/dto.ResumoPassagem'
+        type: array
+      texto:
+        description: Texto corrido do resumo e quem o gerou ("regras" hoje; a IA no
+          futuro)
+        type: string
+      total_passagens:
+        description: Quantas passagens anteriores entraram no resumo
+        type: integer
+      ultima_vinda:
+        example: "2026-09-10"
+        type: string
+    type: object
+  dto.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  dto.TriagemDTO:
+    properties:
+      altura:
+        example: 1.75
+        type: number
+      frequencia_cardiaca:
+        example: 72
+        type: integer
+      observacoes:
+        type: string
+      peso:
+        example: 70.5
+        type: number
+      pos_x:
+        type: number
+      pos_y:
+        type: number
+      pressao_arterial:
+        example: 120/80
+        type: string
+      prioridade:
+        enum:
+        - baixa
+        - media
+        - alta
+        - emergencia
+        example: media
+        type: string
+      saturacao_o2:
+        example: 98
+        type: integer
+      sintomas:
+        type: string
+      temperatura:
+        example: 36.8
+        type: number
+    required:
+    - pressao_arterial
+    - prioridade
+    - sintomas
+    - temperatura
+    type: object
   dto.UserDTO:
     properties:
-      hash_pass:
+      nome:
+        type: string
+      senha:
+        type: string
+    required:
+    - nome
+    - senha
+    type: object
+  model.Admissao:
+    properties:
+      acompanhante:
+        type: string
+      atualizada_em:
+        type: string
+      autor_id:
+        type: integer
+      convenio:
+        type: string
+      forma_chegada:
+        description: andando, cadeira_rodas, maca, ambulancia
+        type: string
+      id:
+        type: integer
+      observacoes:
+        type: string
+      passagem_id:
+        type: integer
+      queixa_principal:
+        type: string
+      registrada_em:
+        type: string
+    type: object
+  model.Consulta:
+    properties:
+      anamnese:
+        type: string
+      atualizada_em:
+        type: string
+      autor_id:
+        type: integer
+      diagnostico:
+        type: string
+      encaminhamento:
+        type: string
+      exames_solicitados:
+        type: string
+      id:
+        type: integer
+      observacoes:
+        type: string
+      passagem_id:
+        type: integer
+      prescricao:
+        type: string
+      registrada_em:
+        type: string
+      retorno:
+        type: string
+    type: object
+  model.Finalizacao:
+    properties:
+      comentario:
+        type: string
+      doutor_id:
+        type: integer
+      fim:
+        type: string
+      id:
+        type: integer
+      inicio:
+        type: string
+      movimentacoes:
+        items:
+          $ref: '#/definitions/model.Movimentacao'
+        type: array
+    type: object
+  model.Movimentacao:
+    properties:
+      comentario:
+        type: string
+      descricao:
+        type: string
+      doutor_id:
+        type: integer
+      em:
+        type: string
+      finalizacao_id:
+        type: integer
+      id:
+        type: integer
+      paciente_id:
+        type: integer
+      paciente_nome:
+        type: string
+      passagem_id:
+        type: integer
+      tipo:
+        example: triagem
+        type: string
+    type: object
+  model.Paciente:
+    properties:
+      atualizado_em:
+        type: string
+      criado_em:
         type: string
       id:
         type: integer
       nome:
         type: string
-    required:
-    - nome
+      status:
+        type: string
+    type: object
+  model.Passagem:
+    properties:
+      admissao:
+        allOf:
+        - $ref: '#/definitions/model.Admissao'
+        description: Documentos desta passagem (nulos enquanto não preenchidos)
+      alta_em:
+        type: string
+      atualizada_em:
+        type: string
+      chegada_em:
+        type: string
+      comentarios:
+        description: Comentários que os doutores deixaram sobre esta passagem ao finalizar
+          o plantão
+        items:
+          $ref: '#/definitions/model.Movimentacao'
+        type: array
+      consulta:
+        $ref: '#/definitions/model.Consulta'
+      criada_em:
+        type: string
+      data:
+        example: "2026-09-22"
+        type: string
+      etapa:
+        example: aguardando_triagem
+        type: string
+      id:
+        type: integer
+      paciente:
+        allOf:
+        - $ref: '#/definitions/model.Paciente'
+        description: Paciente é preenchido a partir do SOAP na leitura; não é gravado
+          aqui.
+      paciente_id:
+        description: PacienteID é o id_paciente do serviço SOAP (o REST não guarda
+          pacientes).
+        type: integer
+      passagens_anteriores:
+        description: Quantas passagens o paciente teve antes desta (calculado na leitura)
+        type: integer
+      pos_x:
+        description: Posição do card no quadro (coordenadas lógicas, canto superior
+          esquerdo)
+        type: number
+      pos_y:
+        type: number
+      triagem:
+        $ref: '#/definitions/model.Triagem'
+    type: object
+  model.Triagem:
+    properties:
+      altura:
+        type: number
+      atualizada_em:
+        type: string
+      autor_id:
+        type: integer
+      frequencia_cardiaca:
+        type: integer
+      id:
+        type: integer
+      observacoes:
+        type: string
+      passagem_id:
+        type: integer
+      peso:
+        type: number
+      pressao_arterial:
+        type: string
+      prioridade:
+        description: baixa, media, alta, emergencia
+        type: string
+      registrada_em:
+        type: string
+      saturacao_o2:
+        type: integer
+      sintomas:
+        type: string
+      temperatura:
+        type: number
     type: object
   model.User:
     properties:
@@ -21,11 +421,189 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: Esta é uma API de exemplo utilizando Gin e Swagger.
+  description: 'Sistema de controle de pacientes. Os doutores fazem login (OAuth2
+    password + JWT). Os dados do paciente (cadastro, consulta, alteração, remoção)
+    ficam no serviço SOAP (projeto-soap); este REST guarda os documentos gerados em
+    cada vinda e as finalizações de plantão. Cada vinda do paciente ao hospital é
+    uma passagem (uma por dia) com os seus documentos: a admissão abre a passagem
+    em aguardando_triagem, a triagem leva para aguardando_consulta e a consulta dá
+    alta. O resumo do paciente usa só as passagens anteriores. Quadro em tempo real
+    em GET / (WebSocket em /ws?token=...).'
   title: Projeto REST API
-  version: "1.0"
+  version: "2.0"
 paths:
-  /ping:
+  /auth/me:
+    get:
+      description: Retorna o doutor dono do token enviado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Usuário autenticado
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Cria um novo doutor (usuário) que poderá fazer login
+      parameters:
+      - description: Nome e senha
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registrar doutor
+      tags:
+      - Auth
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: 'Fluxo OAuth2 "password": valida nome/senha e devolve um JWT Bearer.
+        Aceita JSON {nome, senha} ou form-urlencoded (grant_type=password&username=...&password=...).'
+      parameters:
+      - description: Credenciais
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.OAuthError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.OAuthError'
+      summary: Obter token (login)
+      tags:
+      - Auth
+  /finalizacao:
+    get:
+      description: Tudo o que o doutor autenticado registrou (chegadas, triagens,
+        consultas, correções) desde a última finalização. É o que ele revisa e comenta
+        antes de finalizar.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PreviaFinalizacao'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo para finalizar o plantão
+      tags:
+      - Finalização
+    post:
+      consumes:
+      - application/json
+      description: 'Grava a finalização com o comentário geral e os comentários opcionais
+        de cada movimentação, e encerra a sessão do doutor: o token atual deixa de
+        valer e o quadro é desconectado.'
+      parameters:
+      - description: Comentários do doutor
+        in: body
+        name: finalizacao
+        required: true
+        schema:
+          $ref: '#/definitions/dto.FinalizarDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Finalizacao'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Finalizar o plantão
+      tags:
+      - Finalização
+  /finalizacoes:
+    get:
+      description: Plantões já finalizados pelo doutor autenticado, do mais recente
+        para o mais antigo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Finalizacao'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Minhas finalizações
+      tags:
+      - Finalização
+  /health:
     get:
       description: Responde com pong
       produces:
@@ -40,24 +618,594 @@ paths:
       summary: Ping
       tags:
       - System
-  /soma/:a/:b:
+  /pacientes:
     get:
-      description: Soma dois números inteiros
+      description: Lista os pacientes do serviço SOAP (list_pacientes), em ordem alfabética
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
+            items:
+              $ref: '#/definitions/model.Paciente'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
             additionalProperties:
-              type: integer
+              type: string
             type: object
-      summary: Soma
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar pacientes
       tags:
-      - Math
+      - Pacientes
+    post:
+      consumes:
+      - application/json
+      description: 'Cria o paciente no serviço SOAP (criar_paciente). Cadastrar não
+        coloca o paciente no quadro: para isso, registre a chegada.'
+      parameters:
+      - description: Dados do paciente
+        in: body
+        name: paciente
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PacienteDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Paciente'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cadastrar paciente
+      tags:
+      - Pacientes
+  /pacientes/{id}:
+    delete:
+      description: Remove o paciente no serviço SOAP (remover_paciente) e apaga as
+        passagens e documentos dele no REST. Não é permitido enquanto ele estiver
+        no hospital.
+      parameters:
+      - description: id_paciente no SOAP
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Paciente'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remover paciente
+      tags:
+      - Pacientes
+    get:
+      description: Busca um paciente no serviço SOAP (get_paciente)
+      parameters:
+      - description: id_paciente no SOAP
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Paciente'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Buscar paciente
+      tags:
+      - Pacientes
+    put:
+      consumes:
+      - application/json
+      description: Atualiza nome e status no serviço SOAP (atualizar_paciente)
+      parameters:
+      - description: id_paciente no SOAP
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados do paciente
+        in: body
+        name: paciente
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PacienteDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Paciente'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualizar paciente
+      tags:
+      - Pacientes
+  /pacientes/{id}/passagens:
+    get:
+      description: Lista todas as vindas do paciente ao hospital, com os documentos
+        de cada uma, da mais recente para a mais antiga
+      parameters:
+      - description: ID do paciente (local)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Passagem'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Passagens do paciente
+      tags:
+      - Passagens
+    post:
+      consumes:
+      - application/json
+      description: Abre a passagem de hoje com a admissão e coloca o card em "Aguardando
+        triagem". Se o paciente já teve alta hoje, a passagem do dia é reaberta. Responde
+        409 se ele já está no hospital.
+      parameters:
+      - description: ID do paciente (local)
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Admissão da chegada
+        in: body
+        name: admissao
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdmissaoDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Passagem do dia reaberta
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Registrar chegada
+      tags:
+      - Passagens
+  /pacientes/{id}/resumo:
+    get:
+      description: Resumo para os doutores baseado só nas passagens encerradas de
+        dias anteriores. A passagem atual nunca entra. Hoje o texto é gerado por regras;
+        o contrato já está pronto para um gerador com IA.
+      parameters:
+      - description: ID do paciente (local)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ResumoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo do paciente
+      tags:
+      - Passagens
+  /passagens/{id}:
+    get:
+      description: Uma passagem com o paciente e os documentos
+      parameters:
+      - description: ID da passagem
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Buscar passagem
+      tags:
+      - Passagens
+  /passagens/{id}/admissao:
+    post:
+      consumes:
+      - application/json
+      description: Atualiza a admissão de uma passagem aberta. Não muda a etapa.
+      parameters:
+      - description: ID da passagem
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Admissão
+        in: body
+        name: admissao
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdmissaoDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Corrigir admissão
+      tags:
+      - Passagens
+  /passagens/{id}/consulta:
+    post:
+      consumes:
+      - application/json
+      description: 'Salva a consulta e encerra a passagem: o card sai do quadro e
+        vai para "Atendidos hoje". Exige triagem.'
+      parameters:
+      - description: ID da passagem
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Consulta
+        in: body
+        name: consulta
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ConsultaDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Registrar consulta e dar alta
+      tags:
+      - Passagens
+  /passagens/{id}/triagem:
+    post:
+      consumes:
+      - application/json
+      description: Salva a triagem da passagem. Se ela estava em "aguardando_triagem",
+        passa para "aguardando_consulta". pos_x/pos_y opcionais posicionam o card.
+      parameters:
+      - description: ID da passagem
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Triagem
+        in: body
+        name: triagem
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TriagemDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Passagem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Registrar triagem
+      tags:
+      - Passagens
+  /quadro:
+    get:
+      description: Passagens abertas (de qualquer dia) mais as de hoje que já tiveram
+        alta. É o mesmo conteúdo que o WebSocket envia no "init".
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Passagem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Quadro
+      tags:
+      - Passagens
   /users:
     get:
-      description: Retorna uma lista de todos os usuários cadastrados
+      description: Retorna uma lista de todos os usuários (doutores) cadastrados
       produces:
       - application/json
       responses:
@@ -67,13 +1215,21 @@ paths:
             items:
               $ref: '#/definitions/model.User'
             type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
       summary: Listar todos os usuários
       tags:
       - Users
     post:
       consumes:
       - application/json
-      description: Cria um novo usuário na base de dados
+      description: Cria um novo usuário (doutor) na base de dados
       parameters:
       - description: Dados do usuário
         in: body
@@ -94,6 +1250,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
       summary: Criar um usuário
       tags:
       - Users
@@ -119,12 +1289,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Not Found
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Deletar um usuário
       tags:
       - Users
@@ -149,12 +1327,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Not Found
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Buscar usuário por ID
       tags:
       - Users
@@ -187,13 +1373,28 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Not Found
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Atualizar um usuário
       tags:
       - Users
+securityDefinitions:
+  BearerAuth:
+    description: Cole o access_token obtido em POST /auth/token (com ou sem o prefixo
+      "Bearer ")
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

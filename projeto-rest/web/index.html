@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quadro de Pacientes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8F%A5%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #263449; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --danger: #f87171; --ok: #4ade80; --warn: #fb923c;
+    --drawer: 480px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--panel2);
+    color: var(--text); padding: 6px 12px; border-radius: 6px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #082f49; border-color: var(--accent); font-weight: 600; }
+  button.link { background: none; border: none; color: var(--accent); padding: 0; }
+  button.link:hover { text-decoration: underline; }
+  button:disabled { opacity: .5; cursor: default; }
+  input, select, textarea { font: inherit; width: 100%; padding: 7px 9px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  textarea { min-height: 64px; resize: vertical; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .field { margin-bottom: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .empty { color: var(--muted); font-style: italic; }
+  .error { color: var(--danger); font-size: 13px; min-height: 18px; }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px;
+    background: var(--panel2); font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .chip.ok { background: #14532d; color: var(--ok); }
+  .chip.accent { background: #0c4a6e; color: var(--accent); }
+  .chip.warn { background: #431407; color: var(--warn); }
+
+  /* ---- layout ---- */
+  #topbar { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
+    background: var(--panel); border-bottom: 1px solid var(--border); }
+  #topbar h1 { font-size: 16px; margin: 0 6px 0 0; white-space: nowrap; }
+  #presence { display: flex; gap: 8px; align-items: center; flex: 1; flex-wrap: wrap; min-width: 0; }
+  #presence .chip { color: var(--text); }
+  #fps { font-family: ui-monospace, monospace; color: var(--muted); font-size: 12px; min-width: 50px; text-align: right; }
+  #stage { position: absolute; top: 52px; left: 0; right: 0; bottom: 0; display: flex;
+    align-items: center; justify-content: center; }
+  body.drawer-open #stage { right: var(--drawer); }
+  canvas { display: block; touch-action: none; cursor: default; border-radius: 8px; }
+
+  /* ---- painel lateral do paciente ---- */
+  #drawer { position: fixed; top: 52px; right: 0; bottom: 0; width: var(--drawer); z-index: 5;
+    background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .16s ease-out; }
+  body.drawer-open #drawer { transform: none; }
+  @media (max-width: 1000px) { :root { --drawer: 100vw; } body.drawer-open #stage { right: 0; } }
+  #drawerHead { padding: 14px 16px 0; }
+  #drawerHead .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  #drawerHead h2 { margin: 0; font-size: 18px; }
+  #drawerMeta { color: var(--muted); font-size: 13px; margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  #drawerClose { padding: 2px 10px; font-size: 18px; line-height: 1.2; }
+  #drawerTabs { display: flex; gap: 2px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+  #drawerTabs button { border: none; background: none; border-radius: 0; padding: 8px 12px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  #drawerTabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #drawerBody { flex: 1; overflow: auto; padding: 14px 16px 24px; }
+
+  .resumo { border: 1px solid #0e7490; background: #082f3a; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .resumo .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 600; }
+  .resumo p { margin: 6px 0; }
+  .resumo .meta { color: var(--muted); font-size: 12px; }
+  .resumo.compact p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .primeira { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+
+  .steps { display: flex; gap: 6px; margin-bottom: 14px; }
+  .step { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--muted); }
+  .step b { display: block; font-size: 13px; color: var(--text); }
+  .step.done { border-color: #166534; }
+  .step.done b::before { content: "✓ "; color: var(--ok); }
+  .step.now { border-color: var(--accent); }
+  .step.now b { color: var(--accent); }
+
+  .doc { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .doc h3 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .doc h3 .hora { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 6px; }
+  .doc dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+  .doc dt { color: var(--muted); }
+  .doc dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .doc-form { border: 1px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .doc-form h3 { margin: 0 0 10px; font-size: 15px; }
+  .next { display: flex; justify-content: flex-end; gap: 8px; align-items: center; margin-top: 4px; }
+  .note { color: var(--muted); font-size: 13px; }
+  .note.warn { color: var(--warn); }
+  .fora { text-align: center; padding: 26px 10px; border: 1px dashed var(--border); border-radius: 8px; }
+  .fora p { color: var(--muted); margin: 0 0 12px; }
+
+  details.hist { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+  details.hist summary { cursor: pointer; padding: 10px 12px; display: flex; gap: 8px; align-items: center; list-style: none; }
+  details.hist summary::-webkit-details-marker { display: none; }
+  details.hist summary .d { font-weight: 600; min-width: 84px; }
+  details.hist summary .q { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.hist[open] summary { border-bottom: 1px solid var(--border); }
+  details.hist .inner { padding: 10px 12px 2px; }
+  details.hist .doc { border: none; padding: 0 0 10px; }
+
+  /* ---- janelas ---- */
+  .overlay { position: fixed; inset: 0; background: rgba(2, 6, 23, .7); display: flex;
+    align-items: center; justify-content: center; z-index: 10; }
+  .overlay[hidden] { display: none; }
+  .dialog { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; width: min(560px, 94vw); max-height: 88vh; overflow: auto; }
+  .dialog h2 { margin: 0 0 4px; font-size: 18px; }
+  .dialog .sub { color: var(--muted); margin-bottom: 14px; font-size: 13px; }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+  .item:hover { border-color: var(--accent); }
+  .item .nome { font-weight: 600; }
+  .item .meta { color: var(--muted); font-size: 12px; }
+  #pacienteBusca { flex: 1; }
+  .busca { display: flex; gap: 8px; margin-bottom: 12px; }
+  .novo-paciente { border: 1px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .novo-paciente[hidden] { display: none; }
+  .dialog.wide { width: min(760px, 94vw); }
+  .comentarios { border: 1px solid #854d0e; background: #1c1407; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .comentarios h3 { margin: 0 0 6px; font-size: 13px; color: #facc15; }
+  .comentarios p { margin: 4px 0; font-size: 13px; white-space: pre-wrap; }
+  .comentarios .hora { color: var(--muted); font-size: 12px; margin-right: 6px; }
+  .totais { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .mov { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .mov .topo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .mov .topo .hora { color: var(--muted); font-size: 12px; min-width: 38px; }
+  .mov .topo .nome { font-weight: 600; }
+  .mov .topo .link { margin-left: auto; }
+  .mov .desc { color: var(--text); font-size: 13px; margin: 6px 0 0; }
+  .mov textarea { margin-top: 8px; min-height: 52px; }
+  .aviso { border: 1px solid #9a3412; background: #2a1206; color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+  #btnFinalizar { border-color: #a16207; color: #facc15; }
+
+  #toasts { position: fixed; bottom: 16px; left: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+  .toast { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    padding: 10px 14px; border-radius: 6px; min-width: 240px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  .toast.err { border-left-color: var(--danger); }
+  .toast.ok { border-left-color: var(--ok); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>🏥 Quadro de Pacientes</h1>
+  <div id="presence"></div>
+  <button id="btnPacientes" title="Todos os pacientes: registrar chegada, ver resumo e histórico">👥 Pacientes</button>
+  <button id="btnAtendidos" title="Pacientes que tiveram alta hoje">✅ Atendidos hoje <span class="chip" id="atendidosCount">0</span></button>
+  <span id="fps">— fps</span>
+  <button id="btnFinalizar" title="Revisar e comentar o que você registrou, e sair">🏁 Finalizar</button>
+  <button id="btnLogout" title="Sair sem finalizar o plantão">Sair</button>
+</div>
+<div id="stage"><canvas id="board"></canvas></div>
+
+<!-- Painel lateral do paciente -->
+<aside id="drawer" aria-hidden="true">
+  <div id="drawerHead">
+    <div class="top">
+      <div><h2 id="drawerTitle"></h2><div id="drawerMeta"></div></div>
+      <button type="button" id="drawerClose" title="Fechar (Esc)">×</button>
+    </div>
+    <div id="drawerTabs">
+      <button type="button" data-tab="passagem">Passagem atual</button>
+      <button type="button" data-tab="resumo">Resumo</button>
+      <button type="button" data-tab="historico">Histórico</button>
+    </div>
+  </div>
+  <div id="drawerBody"></div>
+</aside>
+
+<!-- Login -->
+<div id="login" class="overlay">
+  <form class="dialog" id="loginForm" style="width:min(360px,94vw)">
+    <h2>Entrar</h2>
+    <div class="sub">Login do doutor (OAuth2 password + JWT)</div>
+    <div class="field"><label>Nome</label><input name="nome" required autocomplete="username"></div>
+    <div class="field"><label>Senha</label><input name="senha" type="password" required autocomplete="current-password"></div>
+    <div class="error" id="loginError"></div>
+    <div class="actions">
+      <button type="button" id="btnRegister">Cadastrar</button>
+      <button type="submit" class="primary">Entrar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Pacientes -->
+<div id="pacientesOverlay" class="overlay" hidden>
+  <div class="dialog">
+    <h2>Pacientes</h2>
+    <div class="sub">Os pacientes ficam no serviço SOAP. Registre a chegada para o paciente entrar no quadro. Clique no nome para ver o resumo e o histórico.</div>
+    <div class="busca">
+      <input id="pacienteBusca" placeholder="Buscar por nome ou número do prontuário" autocomplete="off">
+      <button type="button" id="btnNovoPaciente">+ Novo paciente</button>
+    </div>
+    <form id="novoPacienteForm" class="novo-paciente" hidden>
+      <div class="row">
+        <div class="field"><label>Nome *</label><input name="nome" required maxlength="100" autocomplete="off"></div>
+        <div class="field"><label>Status</label><input name="status" maxlength="50" placeholder="ex.: em observação" autocomplete="off"></div>
+      </div>
+      <div class="error" id="novoPacienteErro"></div>
+      <div class="actions" style="margin-top:0">
+        <button type="button" id="novoPacienteCancelar">Cancelar</button>
+        <button type="submit" class="primary">Cadastrar paciente</button>
+      </div>
+    </form>
+    <div id="pacientesList"></div>
+    <div class="actions"><button type="button" class="primary" id="pacientesClose">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Atendidos hoje -->
+<div id="atendidosOverlay" class="overlay" hidden>
+  <div class="dialog">
+    <h2>Atendidos hoje</h2>
+    <div class="sub">Passagens de hoje que já tiveram alta.</div>
+    <div id="atendidosList"></div>
+    <div class="actions"><button type="button" class="primary" id="atendidosClose">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Finalizar plantão -->
+<div id="finalizarOverlay" class="overlay" hidden>
+  <div class="dialog wide">
+    <h2>Finalizar plantão</h2>
+    <div class="sub" id="finalizarSub"></div>
+    <div id="finalizarAviso"></div>
+    <div class="totais" id="finalizarTotais"></div>
+    <div id="finalizarLista"></div>
+    <div class="field" style="margin-top:12px"><label>Comentário geral sobre o plantão (opcional)</label>
+      <textarea id="finalizarComentario" maxlength="2000" placeholder="Algo que o próximo doutor precise saber?"></textarea></div>
+    <div class="error" id="finalizarErro"></div>
+    <div class="actions">
+      <button type="button" id="finalizarCancelar">Voltar ao quadro</button>
+      <button type="button" class="primary" id="finalizarConfirmar">Finalizar e sair</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+// =====================================================================
+//  Configuração / estado
+// =====================================================================
+// Base da API. Normalmente a página é servida pelo próprio Go e usa a mesma
+// origem. Se for aberta por outro servidor (ex.: Live Server na 5500) ou por
+// file://, a primeira chamada falha (404/405/rede) e o app cai automaticamente
+// para o backend em localhost:8080. Pode ser forçada com ?api=http://host:porta.
+const API_FALLBACK = 'http://localhost:8080';
+let API = (() => {
+  const q = new URLSearchParams(location.search).get('api');
+  try {
+    if (q) localStorage.setItem('api', q.replace(/\/$/, ''));
+    const saved = localStorage.getItem('api');
+    if (saved) return saved;
+  } catch (_) { /* sem storage */ }
+  return location.protocol.startsWith('http') ? '' : API_FALLBACK;
+})();
+function usarFallback() {
+  if (API === API_FALLBACK) return false;
+  API = API_FALLBACK;
+  try { localStorage.setItem('api', API); } catch (_) { /* sem storage */ }
+  toast('Esta página não está sendo servida pelo backend; usando ' + API);
+  return true;
+}
+
+// Cada card do quadro é uma passagem (uma vinda do paciente, em um dia).
+// As colunas dizem o que o paciente está esperando. "alta" sai do quadro.
+const ETAPAS = ['aguardando_triagem', 'aguardando_consulta'];
+const ETAPA_LABEL = { aguardando_triagem: 'Aguardando triagem', aguardando_consulta: 'Aguardando consulta', alta: 'Alta' };
+const ETAPA_DICA  = { aguardando_triagem: 'Arraste para a direita para fazer a triagem', aguardando_consulta: 'Abra o card para registrar a consulta e dar alta' };
+const PRIORIDADE = { baixa: ['Baixa', '#4ade80'], media: ['Média', '#facc15'], alta: ['Alta', '#fb923c'], emergencia: ['Emergência', '#f87171'] };
+const FORMA_CHEGADA = { andando: 'Andando', cadeira_rodas: 'Cadeira de rodas', maca: 'Maca', ambulancia: 'Ambulância' };
+
+// Geometria lógica (vem também no "init" do servidor)
+let Q = { largura: 1800, altura: 900, coluna: 900, card_largura: 220, card_altura: 96 };
+const HEADER_H = 70;
+
+const state = {
+  token: (() => { try { return sessionStorage.getItem('token'); } catch (_) { return null; } })(),
+  me: null,                      // {conn_id, doutor_id, nome, cor}
+  ws: null,
+  passagens: new Map(),          // id -> {d: passagem, x, y, tx, ty, dragBy: conn_id|null}
+  ordem: [],                     // ids na ordem de desenho (último = topo)
+  pacientes: new Map(),          // id -> paciente
+  doutores: new Map(),           // conn_id -> {info, x, y, tx, ty}
+  drag: null,                    // {id, offX, offY, startX, startY, origX, origY, moved, held}
+  pendingCursor: null,
+  connected: false,
+};
+
+// =====================================================================
+//  Utilidades
+// =====================================================================
+const $ = (s) => document.querySelector(s);
+function toast(msg, kind = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind; el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+const pad = (n) => String(n).padStart(2, '0');
+function hoje() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function fmtDia(ymd) { if (!ymd) return ''; const [y, m, d] = ymd.split('-'); return d ? `${d}/${m}/${y}` : ymd; }
+function fmtDiaCurto(ymd) { if (!ymd) return ''; const [, m, d] = ymd.split('-'); return d ? `${d}/${m}` : ymd; }
+function fmtHora(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtEspera(iso) {
+  const min = Math.max(0, Math.floor((Date.now() - new Date(iso)) / 60000));
+  if (min < 60) return `há ${min} min`;
+  return `há ${Math.floor(min / 60)}h${pad(min % 60)}`;
+}
+const vinda = (anteriores) => `${anteriores + 1}ª vinda`;
+const naQuadro = (d) => !d.alta_em;
+const atendidoHoje = (d) => !!d.alta_em && d.data === hoje();
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  let res;
+  try { res = await fetch(API + path, Object.assign({}, opts, { headers })); }
+  catch (e) { if (usarFallback()) return api(path, opts); throw new Error('Backend inacessível em ' + (API || location.origin)); }
+  if ((res.status === 404 || res.status === 405) && usarFallback()) return api(path, opts);
+  if (res.status === 401 && path !== '/auth/token') { logout(); throw new Error('Sessão expirada'); }
+  let body = null;
+  try { body = await res.json(); } catch (_) { /* sem corpo */ }
+  if (!res.ok) throw new Error((body && (body.error_description || body.error)) || ('HTTP ' + res.status));
+  return body;
+}
+
+// =====================================================================
+//  Autenticação
+// =====================================================================
+async function login(nome, senha) {
+  const tok = await api('/auth/token', { method: 'POST', body: JSON.stringify({ nome, senha }) });
+  state.token = tok.access_token;
+  try { sessionStorage.setItem('token', state.token); } catch (_) { /* sem storage */ }
+  $('#login').hidden = true;
+  connect();
+}
+function logout() {
+  state.token = null;
+  try { sessionStorage.removeItem('token'); } catch (_) { /* sem storage */ }
+  if (state.ws) { state.ws.onclose = null; state.ws.close(); state.ws = null; }
+  state.connected = false;
+  state.passagens.clear(); state.ordem = []; state.pacientes.clear(); state.doutores.clear(); state.drag = null;
+  closeDrawer();
+  for (const o of ['#pacientesOverlay', '#atendidosOverlay', '#finalizarOverlay']) $(o).hidden = true;
+  renderPresence(); atualizarContadores();
+  $('#login').hidden = false;
+}
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  $('#loginError').textContent = '';
+  try { await login(f.get('nome'), f.get('senha')); }
+  catch (err) { $('#loginError').textContent = err.message; }
+});
+$('#btnRegister').addEventListener('click', async () => {
+  const f = new FormData($('#loginForm'));
+  $('#loginError').textContent = '';
+  if (!f.get('nome') || !f.get('senha')) { $('#loginError').textContent = 'Informe nome e senha'; return; }
+  try {
+    await api('/auth/register', { method: 'POST', body: JSON.stringify({ nome: f.get('nome'), senha: f.get('senha') }) });
+    toast('Doutor cadastrado', 'ok');
+    await login(f.get('nome'), f.get('senha'));
+  } catch (err) { $('#loginError').textContent = err.message; }
+});
+$('#btnLogout').addEventListener('click', logout);
+async function carregarPacientes() {
+  try {
+    const lista = await api('/pacientes');
+    state.pacientes.clear();
+    for (const p of lista) state.pacientes.set(p.id, p);
+    if (!$('#pacientesOverlay').hidden) renderPacientes();
+  } catch (err) { toast(err.message, 'err'); }
+}
+
+// =====================================================================
+//  WebSocket
+// =====================================================================
+let reconnectDelay = 1000;
+function connect() {
+  if (!state.token) return;
+  const base = API ? new URL(API) : location;
+  const proto = base.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${base.host}/ws?token=${encodeURIComponent(state.token)}`);
+  state.ws = ws;
+  ws.onopen = () => { state.connected = true; reconnectDelay = 1000; };
+  ws.onmessage = (ev) => onMessage(JSON.parse(ev.data));
+  ws.onclose = (ev) => {
+    state.connected = false;
+    if (ev.code === 1008 || ev.code === 4001) { logout(); return; }
+    // token inválido: o servidor responde 401 antes do upgrade
+    if (!state.me && ev.code === 1006) { api('/auth/me').catch(() => {}); }
+    state.doutores.clear(); renderPresence();
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+  };
+}
+function send(msg) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify(msg));
+}
+
+function upsertPassagem(d, animate) {
+  if (d.paciente) state.pacientes.set(d.paciente.id, d.paciente);
+  let p = state.passagens.get(d.id);
+  if (!p) {
+    p = { d, x: d.pos_x, y: d.pos_y, tx: d.pos_x, ty: d.pos_y, dragBy: null };
+    state.passagens.set(d.id, p);
+    state.ordem.push(d.id);
+  } else {
+    p.d = d;
+    // Se sou eu que estou segurando o card, a posição é minha até eu soltar.
+    if (state.drag && state.drag.id === d.id) return p;
+    p.tx = d.pos_x; p.ty = d.pos_y;
+    if (!animate) { p.x = d.pos_x; p.y = d.pos_y; }
+    p.dragBy = null;
+  }
+  return p;
+}
+function removerPassagem(id) {
+  state.passagens.delete(id);
+  state.ordem = state.ordem.filter(x => x !== id);
+}
+
+function onMessage(m) {
+  switch (m.type) {
+    case 'init': {
+      Q = Object.assign(Q, m.quadro || {});
+      resize();
+      state.me = m.you;
+      state.passagens.clear(); state.ordem = []; state.doutores.clear();
+      for (const d of (m.passagens || [])) upsertPassagem(d, false);
+      for (const dr of (m.doutores || [])) state.doutores.set(dr.conn_id, { info: dr, x: dr.x, y: dr.y, tx: dr.x, ty: dr.y });
+      for (const [pid, conn] of Object.entries(m.dragging || {})) {
+        const p = state.passagens.get(Number(pid)); if (p) p.dragBy = Number(conn);
+      }
+      renderPresence(); atualizarContadores();
+      carregarPacientes();
+      if (drawer.open) renderDrawer();
+      toast(`Conectado como ${m.you.nome}`, 'ok');
+      break;
+    }
+    case 'join':
+      state.doutores.set(m.doutor.conn_id, { info: m.doutor, x: m.doutor.x, y: m.doutor.y, tx: m.doutor.x, ty: m.doutor.y });
+      renderPresence(); toast(`${m.doutor.nome} entrou no quadro`);
+      break;
+    case 'leave': {
+      const dr = state.doutores.get(m.conn_id);
+      state.doutores.delete(m.conn_id);
+      for (const p of state.passagens.values()) if (p.dragBy === m.conn_id) p.dragBy = null;
+      renderPresence(); if (dr) toast(`${dr.info.nome} saiu do quadro`);
+      break;
+    }
+    case 'cursor': {
+      const dr = state.doutores.get(m.conn_id);
+      if (dr) { dr.tx = m.x; dr.ty = m.y; }
+      break;
+    }
+    case 'drag_start': {
+      const p = state.passagens.get(m.passagem_id);
+      if (p) { p.dragBy = m.conn_id; bringToFront(m.passagem_id); }
+      break;
+    }
+    case 'drag_move': {
+      const p = state.passagens.get(m.passagem_id);
+      if (p) { p.dragBy = m.conn_id; p.tx = m.x; p.ty = m.y; }
+      break;
+    }
+    case 'drag_denied': {
+      const dr = state.doutores.get(m.conn_id);
+      toast(`Card sendo movido por ${dr ? dr.info.nome : 'outro doutor'}`, 'err');
+      if (state.drag && state.drag.id === m.passagem_id) state.drag = null;
+      const p = state.passagens.get(m.passagem_id);
+      if (p) { p.dragBy = m.conn_id; p.tx = p.d.pos_x; p.ty = p.d.pos_y; }
+      break;
+    }
+    case 'passagem_updated': {
+      const existed = state.passagens.has(m.passagem.id);
+      upsertPassagem(m.passagem, true);
+      if (!existed && naQuadro(m.passagem)) toast(`${m.passagem.paciente ? m.passagem.paciente.nome : 'Paciente'} chegou ao hospital`);
+      atualizarContadores();
+      if (!$('#atendidosOverlay').hidden) renderAtendidos();
+      if (!$('#pacientesOverlay').hidden) renderPacientes();
+      if (drawer.open && drawer.pacienteId === m.passagem.paciente_id) {
+        // Passagem nova ou reaberta do paciente aberto no painel: passa a ser a atual.
+        if (!drawer.passagemId || (naQuadro(m.passagem) && drawer.passagemId !== m.passagem.id && !drawer.form)) drawer.passagemId = m.passagem.id;
+        drawer.historico = null;
+        if (!drawer.form) renderDrawer(); else renderDrawerHead();
+      }
+      break;
+    }
+    case 'paciente_updated':
+      state.pacientes.set(m.paciente.id, m.paciente);
+      for (const p of state.passagens.values()) if (p.d.paciente_id === m.paciente.id) p.d.paciente = m.paciente;
+      if (!$('#pacientesOverlay').hidden) renderPacientes();
+      if (drawer.open && drawer.pacienteId === m.paciente.id) renderDrawerHead();
+      break;
+    case 'sessao_encerrada':
+      // Finalizou o plantão (nesta ou em outra aba): a sessão acabou.
+      if (state.token) { toast('Plantão finalizado. Sessão encerrada.', 'ok'); logout(); }
+      break;
+    case 'paciente_deleted':
+      for (const id of (m.passagens || [])) removerPassagem(id);
+      state.pacientes.delete(m.paciente_id);
+      if (drawer.open && drawer.pacienteId === m.paciente_id) closeDrawer();
+      atualizarContadores();
+      if (!$('#pacientesOverlay').hidden) renderPacientes();
+      if (!$('#atendidosOverlay').hidden) renderAtendidos();
+      break;
+  }
+}
+
+function renderPresence() {
+  const el = $('#presence');
+  el.innerHTML = '';
+  const add = (info, me) => {
+    const c = document.createElement('span'); c.className = 'chip';
+    c.innerHTML = `<i style="background:${esc(info.cor)}"></i>${esc(info.nome)}${me ? ' (você)' : ''}`;
+    el.appendChild(c);
+  };
+  if (state.me) add(state.me, true);
+  for (const dr of state.doutores.values()) add(dr.info, false);
+  if (!state.connected && state.token) {
+    const c = document.createElement('span'); c.className = 'chip'; c.style.color = 'var(--danger)';
+    c.textContent = 'reconectando…'; el.appendChild(c);
+  }
+}
+
+// =====================================================================
+//  Canvas: dimensionamento e conversão de coordenadas
+// =====================================================================
+const canvas = $('#board');
+const ctx = canvas.getContext('2d');
+let scale = 1, dpr = 1;
+
+function resize() {
+  const stage = $('#stage');
+  const w = stage.clientWidth - 16, h = stage.clientHeight - 16;
+  scale = Math.max(0.1, Math.min(w / Q.largura, h / Q.altura));
+  dpr = window.devicePixelRatio || 1;
+  canvas.style.width = (Q.largura * scale) + 'px';
+  canvas.style.height = (Q.altura * scale) + 'px';
+  canvas.width = Math.round(Q.largura * scale * dpr);
+  canvas.height = Math.round(Q.altura * scale * dpr);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function toLogical(ev) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (ev.clientX - r.left) / scale, y: (ev.clientY - r.top) / scale };
+}
+function clampToColumn(col, x, y) {
+  const m = 10;
+  x = Math.max(col * Q.coluna + m, Math.min((col + 1) * Q.coluna - Q.card_largura - m, x));
+  y = Math.max(HEADER_H, Math.min(Q.altura - Q.card_altura - m, y));
+  return { x, y };
+}
+function colunaDe(x) { return Math.max(0, Math.min(ETAPAS.length - 1, Math.floor(x / Q.coluna))); }
+function bringToFront(id) {
+  const i = state.ordem.indexOf(id);
+  if (i >= 0) { state.ordem.splice(i, 1); state.ordem.push(id); }
+}
+function hitCard(x, y) {
+  for (let i = state.ordem.length - 1; i >= 0; i--) {
+    const p = state.passagens.get(state.ordem[i]);
+    if (p && naQuadro(p.d) &&
+        x >= p.x && x <= p.x + Q.card_largura && y >= p.y && y <= p.y + Q.card_altura) return p;
+  }
+  return null;
+}
+
+// =====================================================================
+//  Entrada do mouse (pointer events)
+// =====================================================================
+canvas.addEventListener('pointerdown', (ev) => {
+  if (ev.button !== 0 || !state.me) return;
+  const { x, y } = toLogical(ev);
+  const p = hitCard(x, y);
+  if (!p) return;
+  if (p.dragBy && p.dragBy !== state.me.conn_id) {
+    const dr = state.doutores.get(p.dragBy);
+    toast(`Card sendo movido por ${dr ? dr.info.nome : 'outro doutor'}`, 'err');
+    return;
+  }
+  if (state.drag) { // já estou segurando um card (formulário de triagem aberto)
+    if (state.drag.held) toast('Salve ou cancele a triagem aberta antes de mexer em outro card', 'err');
+    return;
+  }
+  canvas.setPointerCapture(ev.pointerId);
+  state.drag = { id: p.d.id, offX: x - p.x, offY: y - p.y, startX: x, startY: y,
+                 origX: p.d.pos_x, origY: p.d.pos_y, moved: false, held: false };
+  p.dragBy = state.me.conn_id;
+  bringToFront(p.d.id);
+  send({ type: 'drag_start', passagem_id: p.d.id });
+});
+
+canvas.addEventListener('pointermove', (ev) => {
+  const { x, y } = toLogical(ev);
+  state.pendingCursor = { x, y };
+  const d = state.drag;
+  if (d && !d.held) {
+    const p = state.passagens.get(d.id);
+    if (!p) return;
+    if (!d.moved && Math.hypot(x - d.startX, y - d.startY) > 4) d.moved = true;
+    if (d.moved) {
+      p.x = p.tx = Math.max(0, Math.min(Q.largura - Q.card_largura, x - d.offX));
+      p.y = p.ty = Math.max(HEADER_H, Math.min(Q.altura - Q.card_altura, y - d.offY));
+      d.dirty = true;
+    }
+  }
+  canvas.style.cursor = (d || hitCard(x, y)) ? 'grab' : 'default';
+});
+
+function endDrag() {
+  const d = state.drag;
+  if (!d || d.held) return;
+  const p = state.passagens.get(d.id);
+  if (!p) { state.drag = null; return; }
+
+  if (!d.moved) {                     // clique simples: abre o painel (só leitura)
+    state.drag = null; p.dragBy = null;
+    send({ type: 'drag_end', passagem_id: p.d.id, x: p.d.pos_x, y: p.d.pos_y });
+    openDrawerPassagem(p.d.id);
+    return;
+  }
+
+  const atual = ETAPAS.indexOf(p.d.etapa);
+  const alvo = colunaDe(p.x + Q.card_largura / 2);
+
+  if (alvo === atual) {               // só reposicionou dentro da coluna
+    const c = clampToColumn(alvo, p.x, p.y);
+    p.x = p.tx = c.x; p.y = p.ty = c.y;
+    state.drag = null; p.dragBy = null;
+    send({ type: 'drag_end', passagem_id: p.d.id, x: c.x, y: c.y });
+    return;
+  }
+
+  if (alvo === atual + 1) {           // próxima coluna: faz a triagem no painel
+    const c = clampToColumn(alvo, p.x, p.y);
+    p.x = p.tx = c.x; p.y = p.ty = c.y;
+    d.held = true;                    // mantém o lock enquanto preenche
+    openDrawerPassagem(p.d.id, { form: { doc: 'triagem', editar: false, pos: c } });
+    return;
+  }
+
+  toast('Não é possível voltar uma etapa', 'err');
+  cancelDrag();
+}
+function cancelDrag() {
+  const d = state.drag; if (!d) return;
+  const p = state.passagens.get(d.id);
+  state.drag = null;
+  if (p) { p.tx = d.origX; p.ty = d.origY; p.dragBy = null; }
+  send({ type: 'drag_end', passagem_id: d.id, x: d.origX, y: d.origY });
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', () => { if (state.drag && !state.drag.held) cancelDrag(); });
+canvas.addEventListener('pointerleave', () => { state.pendingCursor = { x: -100, y: -100 }; });
+
+// =====================================================================
+//  Loop de renderização (requestAnimationFrame ~60fps)
+// =====================================================================
+let lastT = performance.now(), fpsAcc = 0, fpsN = 0;
+function lerpTo(o, dt) {
+  const k = 1 - Math.exp(-dt / 45);
+  o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k;
+}
+
+function frame(t) {
+  const dt = Math.min(50, t - lastT); lastT = t;
+  fpsAcc += dt; fpsN++;
+  if (fpsAcc >= 500) { $('#fps').textContent = Math.round(1000 / (fpsAcc / fpsN)) + ' fps'; fpsAcc = 0; fpsN = 0; }
+
+  if (state.pendingCursor) { send({ type: 'cursor', x: state.pendingCursor.x, y: state.pendingCursor.y }); state.pendingCursor = null; }
+  if (state.drag && state.drag.dirty && !state.drag.held) {
+    const p = state.passagens.get(state.drag.id);
+    if (p) send({ type: 'drag_move', passagem_id: p.d.id, x: p.x, y: p.y });
+    state.drag.dirty = false;
+  }
+
+  for (const p of state.passagens.values()) if (!(state.drag && state.drag.id === p.d.id)) lerpTo(p, dt);
+  for (const dr of state.doutores.values()) lerpTo(dr, dt);
+
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function draw() {
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  ctx.clearRect(0, 0, Q.largura, Q.altura);
+
+  const colCores = ['#1c2536', '#1e293b'];
+  const counts = ETAPAS.map(() => 0);
+  for (const p of state.passagens.values()) { if (!naQuadro(p.d)) continue; const i = ETAPAS.indexOf(p.d.etapa); if (i >= 0) counts[i]++; }
+  for (let i = 0; i < ETAPAS.length; i++) {
+    const x = i * Q.coluna;
+    ctx.fillStyle = colCores[i % 2]; ctx.fillRect(x, 0, Q.coluna, Q.altura);
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1; ctx.strokeRect(x + .5, .5, Q.coluna - 1, Q.altura - 1);
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(x, 0, Q.coluna, HEADER_H);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '600 22px system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    const titulo = ETAPA_LABEL[ETAPAS[i]];
+    ctx.fillText(titulo, x + 20, 28);
+    const tw = ctx.measureText(titulo).width;
+    ctx.fillStyle = '#38bdf8'; ctx.font = '600 15px system-ui, sans-serif';
+    ctx.fillText(String(counts[i]), x + 30 + tw, 29);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '13px system-ui, sans-serif';
+    ctx.fillText(ETAPA_DICA[ETAPAS[i]], x + 20, 53);
+  }
+  // destaque da coluna alvo durante o arraste
+  if (state.drag && state.drag.moved && !state.drag.held) {
+    const p = state.passagens.get(state.drag.id);
+    if (p) {
+      const alvo = colunaDe(p.x + Q.card_largura / 2), atual = ETAPAS.indexOf(p.d.etapa);
+      ctx.fillStyle = alvo === atual ? 'rgba(56,189,248,.06)' : alvo === atual + 1 ? 'rgba(74,222,128,.10)' : 'rgba(248,113,113,.10)';
+      ctx.fillRect(alvo * Q.coluna, HEADER_H, Q.coluna, Q.altura - HEADER_H);
+    }
+  }
+
+  for (const id of state.ordem) {
+    const p = state.passagens.get(id);
+    if (p && naQuadro(p.d)) drawCard(p);
+  }
+  for (const dr of state.doutores.values()) drawCursor(dr);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function truncate(text, maxW) {
+  text = String(text || '');
+  if (ctx.measureText(text).width <= maxW) return text;
+  while (text.length > 1 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1);
+  return text + '…';
+}
+
+function drawCard(p) {
+  const { x, y } = p, w = Q.card_largura, h = Q.card_altura, d = p.d;
+  const meuDrag = state.drag && state.drag.id === d.id;
+  const outro = p.dragBy && (!state.me || p.dragBy !== state.me.conn_id) ? state.doutores.get(p.dragBy) : null;
+  const lifted = meuDrag || outro;
+  const aberto = drawer.open && drawer.passagemId === d.id;
+  const nome = d.paciente ? d.paciente.nome : `Paciente #${d.paciente_id}`;
+
+  ctx.save();
+  if (lifted) { ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8; }
+  roundRect(x, y, w, h, 10);
+  ctx.fillStyle = lifted ? '#334155' : '#263449'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = lifted || aberto ? 2.5 : 1;
+  ctx.strokeStyle = outro ? outro.info.cor : meuDrag ? state.me.cor : aberto ? '#38bdf8' : '#475569';
+  ctx.stroke();
+
+  // faixa de prioridade (só depois da triagem desta passagem)
+  const prio = d.etapa !== 'aguardando_triagem' && d.triagem ? PRIORIDADE[d.triagem.prioridade] : null;
+  if (prio) { ctx.fillStyle = prio[1]; roundRect(x, y, 6, h, 3); ctx.fill(); }
+
+  ctx.textBaseline = 'alphabetic';
+  // selo "Nª vinda" para quem já esteve no hospital
+  let nomeMax = w - 30;
+  if (d.passagens_anteriores > 0) {
+    ctx.font = '600 11px system-ui, sans-serif';
+    const txt = vinda(d.passagens_anteriores), tw = ctx.measureText(txt).width + 12;
+    ctx.fillStyle = '#0c4a6e'; roundRect(x + w - tw - 10, y + 11, tw, 18, 9); ctx.fill();
+    ctx.fillStyle = '#38bdf8'; ctx.fillText(txt, x + w - tw - 4, y + 24);
+    nomeMax = w - tw - 36;
+  }
+  ctx.fillStyle = '#f1f5f9'; ctx.font = '600 16px system-ui, sans-serif';
+  ctx.fillText(truncate(nome, nomeMax), x + 16, y + 26);
+
+  ctx.font = '12px system-ui, sans-serif';
+  if (d.data === hoje()) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(truncate(`Chegou ${fmtHora(d.chegada_em)} · ${fmtEspera(d.chegada_em)}`, w - 30), x + 16, y + 47);
+  } else {
+    ctx.fillStyle = '#fb923c';
+    ctx.fillText(truncate(`Aberta desde ${fmtDiaCurto(d.data)} ${fmtHora(d.chegada_em)}`, w - 30), x + 16, y + 47);
+  }
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(truncate(d.admissao ? d.admissao.queixa_principal : '', w - 30), x + 16, y + 67);
+
+  if (prio) {
+    ctx.font = '600 11px system-ui, sans-serif'; ctx.fillStyle = prio[1]; ctx.textAlign = 'right';
+    ctx.fillText('Prioridade ' + prio[0].toLowerCase(), x + w - 12, y + h - 10); ctx.textAlign = 'left';
+  }
+
+  if (outro) {
+    ctx.fillStyle = outro.info.cor; ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillText(truncate(outro.info.nome + ' está movendo', w), x, y - 6);
+  }
+  ctx.restore();
+}
+
+function drawCursor(dr) {
+  if (dr.x < 0 || dr.y < 0) return;
+  const { x, y } = dr, cor = dr.info.cor;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x, y + 20); ctx.lineTo(x + 5, y + 15); ctx.lineTo(x + 9, y + 23);
+  ctx.lineTo(x + 12, y + 21); ctx.lineTo(x + 8, y + 13); ctx.lineTo(x + 15, y + 13); ctx.closePath();
+  ctx.fillStyle = cor; ctx.fill(); ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = '600 12px system-ui, sans-serif'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(dr.info.nome).width;
+  roundRect(x + 16, y + 18, tw + 12, 20, 6); ctx.fillStyle = cor; ctx.fill();
+  ctx.fillStyle = '#0f172a'; ctx.fillText(dr.info.nome, x + 22, y + 28);
+  ctx.restore();
+}
+
+// =====================================================================
+//  Documentos: campos dos formulários e exibição
+// =====================================================================
+const FORMS = {
+  admissao: {
+    titulo: 'Chegada',
+    fields: [
+      { name: 'queixa_principal', label: 'Queixa principal', type: 'textarea', required: true },
+      { name: 'forma_chegada', label: 'Forma de chegada', type: 'select', required: true, options: FORMA_CHEGADA },
+      { name: 'acompanhante', label: 'Acompanhante', type: 'text', half: true },
+      { name: 'convenio', label: 'Convênio', type: 'text', half: true },
+      { name: 'observacoes', label: 'Observações', type: 'textarea' },
+    ],
+  },
+  triagem: {
+    titulo: 'Triagem',
+    fields: [
+      { name: 'pressao_arterial', label: 'Pressão arterial', type: 'text', required: true, placeholder: '120/80', half: true },
+      { name: 'temperatura', label: 'Temperatura (°C)', type: 'number', step: '0.1', required: true, half: true },
+      { name: 'frequencia_cardiaca', label: 'Freq. cardíaca (bpm)', type: 'number', half: true },
+      { name: 'saturacao_o2', label: 'Saturação O₂ (%)', type: 'number', half: true },
+      { name: 'peso', label: 'Peso (kg)', type: 'number', step: '0.1', half: true },
+      { name: 'altura', label: 'Altura (m)', type: 'number', step: '0.01', half: true },
+      { name: 'prioridade', label: 'Prioridade', type: 'select', required: true, options: Object.fromEntries(Object.entries(PRIORIDADE).map(([k, v]) => [k, v[0]])) },
+      { name: 'sintomas', label: 'Sintomas', type: 'textarea', required: true },
+      { name: 'observacoes', label: 'Observações', type: 'textarea' },
+    ],
+  },
+  consulta: {
+    titulo: 'Consulta',
+    fields: [
+      { name: 'anamnese', label: 'Anamnese', type: 'textarea', required: true },
+      { name: 'diagnostico', label: 'Diagnóstico', type: 'textarea', required: true },
+      { name: 'prescricao', label: 'Prescrição', type: 'textarea' },
+      { name: 'exames_solicitados', label: 'Exames solicitados', type: 'textarea' },
+      { name: 'encaminhamento', label: 'Encaminhamento', type: 'text', half: true },
+      { name: 'retorno', label: 'Retorno', type: 'date', half: true },
+      { name: 'observacoes', label: 'Observações', type: 'textarea' },
+    ],
+  },
+};
+
+const LINHAS = {
+  admissao: a => [['Queixa principal', a.queixa_principal], ['Forma de chegada', FORMA_CHEGADA[a.forma_chegada] || a.forma_chegada],
+    ['Acompanhante', a.acompanhante], ['Convênio', a.convenio], ['Observações', a.observacoes]],
+  triagem: t => [['Prioridade', PRIORIDADE[t.prioridade] ? PRIORIDADE[t.prioridade][0] : t.prioridade], ['Pressão arterial', t.pressao_arterial],
+    ['Temperatura', t.temperatura && t.temperatura + ' °C'], ['Freq. cardíaca', t.frequencia_cardiaca && t.frequencia_cardiaca + ' bpm'],
+    ['Saturação O₂', t.saturacao_o2 && t.saturacao_o2 + ' %'], ['Peso', t.peso && t.peso + ' kg'], ['Altura', t.altura && t.altura + ' m'],
+    ['Sintomas', t.sintomas], ['Observações', t.observacoes]],
+  consulta: c => [['Anamnese', c.anamnese], ['Diagnóstico', c.diagnostico], ['Prescrição', c.prescricao],
+    ['Exames solicitados', c.exames_solicitados], ['Encaminhamento', c.encaminhamento], ['Retorno', fmtDia(c.retorno)], ['Observações', c.observacoes]],
+};
+
+function dl(rows) {
+  const html = rows.filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== 0)
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+  return html ? `<dl>${html}</dl>` : '<div class="empty">Sem informações</div>';
+}
+function docBlock(doc, dados, acao) {
+  const hora = fmtHora(dados.atualizada_em || dados.registrada_em);
+  return `<div class="doc"><h3><span>${esc(FORMS[doc].titulo)}<span class="hora">${esc(hora)}</span></span>${acao || ''}</h3>${dl(LINHAS[doc](dados))}</div>`;
+}
+function prioridadeChip(prio) {
+  const p = PRIORIDADE[prio]; if (!p) return '';
+  return `<span class="chip" style="color:${p[1]}">${esc(p[0])}</span>`;
+}
+
+function formHTML(doc, inicial, submitLabel) {
+  const spec = FORMS[doc];
+  const campo = (f) => {
+    const v = inicial[f.name];
+    const val = v !== undefined && v !== null && v !== 0 ? String(v) : '';
+    const req = f.required ? ' required' : '';
+    let input;
+    if (f.type === 'textarea') input = `<textarea name="${f.name}"${req}>${esc(val)}</textarea>`;
+    else if (f.type === 'select') {
+      const opts = Object.entries(f.options).map(([k, lab]) => `<option value="${esc(k)}"${k === val ? ' selected' : ''}>${esc(lab)}</option>`).join('');
+      input = `<select name="${f.name}"${req}><option value="" disabled${val ? '' : ' selected'}>Selecione</option>${opts}</select>`;
+    } else {
+      input = `<input name="${f.name}" type="${f.type}"${f.step ? ` step="${f.step}"` : ''}${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ''} value="${esc(val)}"${req}>`;
+    }
+    return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label>${input}</div>`;
+  };
+  let html = '';
+  for (let i = 0; i < spec.fields.length; i++) {
+    const f = spec.fields[i], g = spec.fields[i + 1];
+    if (f.half && g && g.half) { html += `<div class="row">${campo(f)}${campo(g)}</div>`; i++; }
+    else html += campo(f);
+  }
+  return `<form id="docForm" class="doc-form" data-doc="${doc}"><h3>${esc(spec.titulo)}</h3>${html}
+    <div class="error" id="formError"></div>
+    <div class="actions"><button type="button" data-action="cancelar">Cancelar</button><button type="submit" class="primary">${esc(submitLabel)}</button></div></form>`;
+}
+
+// =====================================================================
+//  Painel lateral do paciente
+// =====================================================================
+// O clique no card só abre o painel para leitura. Formulários aparecem aqui
+// dentro, quando o doutor escolhe a próxima etapa ou arrasta o card.
+const drawer = {
+  open: false, pacienteId: null, passagemId: null, tab: 'passagem',
+  form: null,        // {doc, editar, pos}
+  resumo: null, historico: null, seq: 0,
+};
+
+function pacienteDe(id) {
+  if (state.pacientes.has(id)) return state.pacientes.get(id);
+  for (const p of state.passagens.values()) if (p.d.paciente_id === id && p.d.paciente) return p.d.paciente;
+  return null;
+}
+// Passagem atual do paciente: a aberta, senão a de hoje que já teve alta.
+function passagemAtualDe(pacienteId) {
+  let hojeAlta = null;
+  for (const p of state.passagens.values()) {
+    if (p.d.paciente_id !== pacienteId) continue;
+    if (naQuadro(p.d)) return p.d;
+    if (atendidoHoje(p.d)) hojeAlta = p.d;
+  }
+  return hojeAlta;
+}
+
+function soltarCardSegurado() {
+  if (state.drag && state.drag.held) cancelDrag();
+}
+function openDrawer(o) {
+  // O card segurado pelo arraste continua segurado enquanto o formulário dele
+  // estiver aberto; qualquer outro card segurado volta para o lugar.
+  const manter = o.form && o.form.pos && state.drag && state.drag.held && state.drag.id === o.passagemId;
+  if (!manter) soltarCardSegurado();
+  const outroPaciente = drawer.pacienteId !== o.pacienteId;
+  drawer.open = true;
+  drawer.pacienteId = o.pacienteId;
+  drawer.passagemId = o.passagemId ?? null;
+  drawer.tab = o.tab || 'passagem';
+  drawer.form = o.form || null;
+  if (outroPaciente) { drawer.resumo = null; drawer.historico = null; }
+  document.body.classList.add('drawer-open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  resize();
+  renderDrawer();
+  if (outroPaciente || !drawer.resumo) carregarResumo();
+}
+function openDrawerPassagem(id, extra = {}) {
+  const p = state.passagens.get(id); if (!p) return;
+  openDrawer(Object.assign({ pacienteId: p.d.paciente_id, passagemId: id }, extra));
+}
+function openDrawerPaciente(pacienteId, extra = {}) {
+  const atual = passagemAtualDe(pacienteId);
+  openDrawer(Object.assign({ pacienteId, passagemId: atual ? atual.id : null }, extra));
+}
+function closeDrawer() {
+  soltarCardSegurado();
+  drawer.open = false; drawer.pacienteId = null; drawer.passagemId = null; drawer.form = null;
+  drawer.resumo = null; drawer.historico = null;
+  document.body.classList.remove('drawer-open');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+  resize();
+}
+$('#drawerClose').addEventListener('click', closeDrawer);
+$('#drawerTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]'); if (!b) return;
+  trocarAba(b.dataset.tab);
+});
+function trocarAba(tab) {
+  if (drawer.form && tab !== 'passagem' && !confirm('Descartar o formulário em preenchimento?')) return;
+  if (tab !== 'passagem') { soltarCardSegurado(); drawer.form = null; }
+  drawer.tab = tab;
+  renderDrawer();
+  if (tab === 'historico' && !drawer.historico) carregarHistorico();
+}
+
+async function carregarResumo() {
+  const seq = ++drawer.seq, pid = drawer.pacienteId;
+  try {
+    const r = await api(`/pacientes/${pid}/resumo`);
+    if (seq !== drawer.seq || pid !== drawer.pacienteId) return;
+    drawer.resumo = r;
+  } catch (err) {
+    if (pid !== drawer.pacienteId) return;
+    drawer.resumo = { erro: err.message };
+  }
+  renderDrawerHead();
+  if (drawer.tab === 'resumo') renderDrawer();
+  else renderResumoCallout();
+}
+async function carregarHistorico() {
+  const pid = drawer.pacienteId;
+  try {
+    const lista = await api(`/pacientes/${pid}/passagens`);
+    if (pid !== drawer.pacienteId) return;
+    drawer.historico = lista;
+  } catch (err) {
+    if (pid !== drawer.pacienteId) return;
+    drawer.historico = { erro: err.message };
+  }
+  if (drawer.tab === 'historico') renderDrawer();
+}
+
+function renderDrawerHead() {
+  if (!drawer.open) return;
+  const pac = pacienteDe(drawer.pacienteId) || {};
+  const pg = drawer.passagemId && state.passagens.get(drawer.passagemId);
+  $('#drawerTitle').textContent = pac.nome || `Paciente #${drawer.pacienteId}`;
+  const meta = [`<span>Prontuário #${esc(drawer.pacienteId)}</span>`];
+  if (pac.status) meta.push(`<span>· ${esc(pac.status)}</span>`);
+  if (pg && naQuadro(pg.d)) meta.push(`<span class="chip accent">${esc(ETAPA_LABEL[pg.d.etapa])}</span>`);
+  else if (pg && atendidoHoje(pg.d)) meta.push(`<span class="chip ok">Alta às ${esc(fmtHora(pg.d.alta_em))}</span>`);
+  else meta.push('<span class="chip">Fora do hospital</span>');
+  const anteriores = pg ? pg.d.passagens_anteriores : (drawer.resumo && drawer.resumo.total_passagens);
+  if (anteriores > 0) meta.push(`<span class="chip">${esc(vinda(anteriores))}</span>`);
+  $('#drawerMeta').innerHTML = meta.join('');
+  for (const b of document.querySelectorAll('#drawerTabs button')) b.classList.toggle('active', b.dataset.tab === drawer.tab);
+}
+
+function renderDrawer() {
+  if (!drawer.open) return;
+  renderDrawerHead();
+  const body = $('#drawerBody');
+  if (drawer.tab === 'resumo') body.innerHTML = htmlResumo();
+  else if (drawer.tab === 'historico') body.innerHTML = htmlHistorico();
+  else { body.innerHTML = htmlPassagem(); renderResumoCallout(); }
+  const first = body.querySelector('#docForm input, #docForm select, #docForm textarea');
+  if (first) first.focus();
+}
+
+// Resumo curto no topo da passagem atual, para o doutor ver sem trocar de aba.
+function renderResumoCallout() {
+  const el = $('#resumoCallout'); if (!el) return;
+  const r = drawer.resumo;
+  if (!r) { el.innerHTML = '<div class="primeira">Carregando resumo…</div>'; return; }
+  if (r.erro) { el.innerHTML = `<div class="primeira">Resumo indisponível: ${esc(r.erro)}</div>`; return; }
+  if (!r.total_passagens) { el.innerHTML = '<div class="primeira">Primeira vinda do paciente. Não há histórico anterior.</div>'; return; }
+  el.innerHTML = `<div class="resumo compact"><div class="k">Resumo das vindas anteriores</div><p>${esc(r.texto)}</p>
+    <button type="button" class="link" data-action="aba" data-tab="resumo">Ver resumo completo</button></div>`;
+}
+
+function htmlResumo() {
+  const r = drawer.resumo;
+  if (!r) return '<div class="empty">Carregando…</div>';
+  if (r.erro) return `<div class="error">${esc(r.erro)}</div>`;
+  let html = `<div class="resumo"><div class="k">Resumo das vindas anteriores</div><p>${esc(r.texto)}</p>
+    <div class="meta">Baseado em ${r.total_passagens} passagem(ns) encerrada(s) de dias anteriores. A passagem atual não entra no resumo.</div></div>`;
+  for (const a of (r.passagens || [])) {
+    html += `<div class="doc"><h3><span>${esc(fmtDia(a.data))}</span>${prioridadeChip(a.prioridade)}</h3>${dl([
+      ['Queixa', a.queixa_principal], ['Sintomas', a.sintomas], ['Diagnóstico', a.diagnostico], ['Prescrição', a.prescricao],
+      ['Exames', a.exames_solicitados], ['Encaminhamento', a.encaminhamento], ['Retorno', fmtDia(a.retorno)],
+      ['Sinais vitais', [a.pressao_arterial && `PA ${a.pressao_arterial}`, a.temperatura && `${a.temperatura} °C`, a.saturacao_o2 && `SpO₂ ${a.saturacao_o2}%`, a.peso && `${a.peso} kg`].filter(Boolean).join(' · ')],
+    ])}</div>`;
+  }
+  return html;
+}
+
+function htmlStepper(d) {
+  const idx = d.etapa === 'aguardando_triagem' ? 1 : d.etapa === 'aguardando_consulta' ? 2 : 3;
+  const passos = [
+    ['Chegada', fmtHora(d.chegada_em)],
+    ['Triagem', idx > 1 && d.triagem ? fmtHora(d.triagem.atualizada_em) : ''],
+    ['Consulta', idx > 2 && d.consulta ? fmtHora(d.consulta.atualizada_em) : ''],
+  ];
+  return '<div class="steps">' + passos.map(([nome, hora], i) => {
+    const cls = i < idx ? 'done' : i === idx ? 'now' : '';
+    const sub = i < idx ? hora : i === idx ? 'agora' : '';
+    return `<div class="step ${cls}"><b>${nome}</b>${esc(sub) || '&nbsp;'}</div>`;
+  }).join('') + '</div>';
+}
+
+// Documentos que valem para a etapa atual. Numa passagem reaberta no mesmo
+// dia, a triagem e a consulta de antes da reabertura não contam como feitas.
+function docsFeitos(d) {
+  const feitos = [['admissao', d.admissao]];
+  if (d.etapa !== 'aguardando_triagem') feitos.push(['triagem', d.triagem]);
+  if (d.etapa === 'alta') feitos.push(['consulta', d.consulta]);
+  return feitos.filter(([, v]) => v);
+}
+
+function htmlPassagem() {
+  let html = '<div id="resumoCallout"></div>';
+  const p = drawer.passagemId && state.passagens.get(drawer.passagemId);
+  const f = drawer.form;
+
+  if (!p) {
+    if (f && f.doc === 'admissao') return html + formHTML('admissao', {}, 'Registrar chegada');
+    return html + `<div class="fora"><p>O paciente não está no hospital agora.</p>
+      <button type="button" class="primary" data-action="chegada">Registrar chegada</button></div>`;
+  }
+
+  const d = p.d, aberta = naQuadro(d);
+  const titulo = d.data === hoje() ? 'Hoje' : fmtDia(d.data);
+  html += `<div class="note${aberta && d.data !== hoje() ? ' warn' : ''}" style="margin-bottom:8px">${esc(titulo)} · ` +
+    (aberta ? (d.data === hoje() ? `chegou às ${esc(fmtHora(d.chegada_em))}, ${esc(fmtEspera(d.chegada_em))}` : 'passagem ainda aberta')
+            : `alta às ${esc(fmtHora(d.alta_em))}`) + '</div>';
+  html += htmlStepper(d);
+
+  html += htmlComentarios(d);
+
+  // Documentos já feitos nesta passagem (só leitura).
+  for (const [doc, dados] of docsFeitos(d)) {
+    if (f && f.editar && f.doc === doc) { html += formHTML(doc, dados, 'Salvar alterações'); continue; }
+    const acao = aberta && !f ? `<button type="button" class="link" data-action="editar" data-doc="${doc}">Corrigir</button>` : '';
+    html += docBlock(doc, dados, acao);
+  }
+
+  if (f && !f.editar) {
+    const rotulo = f.doc === 'consulta' ? 'Registrar consulta e dar alta' : f.doc === 'triagem' ? 'Salvar triagem' : 'Registrar chegada';
+    html += formHTML(f.doc, {}, rotulo);
+  } else if (!f) {
+    if (d.etapa === 'aguardando_triagem') html += `<div class="next"><button type="button" class="primary" data-action="novo" data-doc="triagem">Fazer triagem</button></div>`;
+    else if (d.etapa === 'aguardando_consulta') html += `<div class="next"><button type="button" class="primary" data-action="novo" data-doc="consulta">Registrar consulta</button></div>`;
+    else if (d.data === hoje()) html += `<div class="next"><span class="note">Voltou ao hospital?</span><button type="button" data-action="chegada">Registrar nova chegada</button></div>`;
+  }
+  return html;
+}
+
+// Comentários que os doutores deixaram sobre a passagem ao finalizar o plantão.
+function htmlComentarios(d) {
+  const cs = d.comentarios || [];
+  if (!cs.length) return '';
+  return `<div class="comentarios"><h3>Comentários do fechamento de plantão</h3>` +
+    cs.map(c => `<p><span class="hora">${esc(fmtHora(c.em))}</span>${esc(c.comentario)}</p>`).join('') + '</div>';
+}
+
+function htmlHistorico() {
+  const h = drawer.historico;
+  if (!h) return '<div class="empty">Carregando…</div>';
+  if (h.erro) return `<div class="error">${esc(h.erro)}</div>`;
+  if (!h.length) return '<div class="empty">Nenhuma passagem registrada.</div>';
+  return h.map(pg => {
+    const status = pg.alta_em ? `<span class="chip ok">Alta ${esc(fmtHora(pg.alta_em))}</span>` : `<span class="chip accent">${esc(ETAPA_LABEL[pg.etapa])}</span>`;
+    const atual = pg.id === drawer.passagemId ? ' <span class="chip">atual</span>' : '';
+    const feitos = docsFeitos(pg);
+    const docs = feitos.map(([doc, v]) => docBlock(doc, v, '')).join('');
+    const tri = feitos.find(([doc]) => doc === 'triagem');
+    return `<details class="hist"><summary><span class="d">${esc(fmtDia(pg.data))}</span>
+      <span class="q">${esc(pg.admissao ? pg.admissao.queixa_principal : '')}</span>${prioridadeChip(tri && tri[1].prioridade)}${status}${atual}</summary>
+      <div class="inner">${htmlComentarios(pg)}${docs || '<div class="empty">Sem documentos</div>'}</div></details>`;
+  }).join('');
+}
+
+$('#drawerBody').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-action]'); if (!b) return;
+  switch (b.dataset.action) {
+    case 'aba': trocarAba(b.dataset.tab); return;
+    case 'chegada': drawer.form = { doc: 'admissao', editar: false }; break;
+    case 'novo': drawer.form = { doc: b.dataset.doc, editar: false }; break;
+    case 'editar': drawer.form = { doc: b.dataset.doc, editar: true }; break;
+    case 'cancelar': soltarCardSegurado(); drawer.form = null; break;
+    default: return;
+  }
+  renderDrawer();
+});
+
+$('#drawerBody').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = drawer.form; if (!f) return;
+  const form = e.target, spec = FORMS[f.doc];
+  const body = {};
+  for (const campo of spec.fields) {
+    const el = form.elements[campo.name];
+    body[campo.name] = campo.type === 'number' ? (el.value === '' ? 0 : Number(el.value)) : el.value;
+  }
+  if (f.pos) { body.pos_x = f.pos.x; body.pos_y = f.pos.y; }
+
+  let path;
+  if (f.doc === 'admissao' && !f.editar) path = `/pacientes/${drawer.pacienteId}/passagens`;
+  else path = `/passagens/${drawer.passagemId}/${f.doc}`;
+
+  const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+  try {
+    const r = await api(path, { method: 'POST', body: JSON.stringify(body) });
+    if (state.drag && state.drag.id === r.id) state.drag = null;   // o servidor já liberou o lock
+    upsertPassagem(r, true);
+    drawer.passagemId = r.id; drawer.form = null; drawer.historico = null;
+    const nome = r.paciente ? r.paciente.nome : 'Paciente';
+    if (f.editar) toast('Alterações salvas', 'ok');
+    else if (f.doc === 'admissao') toast(`${nome} entrou no quadro em "${ETAPA_LABEL[r.etapa]}"`, 'ok');
+    else if (f.doc === 'triagem') toast(`Triagem salva. ${nome} está aguardando consulta.`, 'ok');
+    else toast(`Consulta registrada. ${nome} teve alta.`, 'ok');
+    atualizarContadores();
+    renderDrawer();
+  } catch (err) {
+    const el = $('#formError'); if (el) el.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+// =====================================================================
+//  Pacientes e atendidos hoje
+// =====================================================================
+function renderPacientes() {
+  const q = $('#pacienteBusca').value.trim().toLowerCase();
+  const lista = [...state.pacientes.values()]
+    .filter(p => !q || p.nome.toLowerCase().includes(q) || String(p.id) === q.replace('#', ''))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const box = $('#pacientesList');
+  if (!state.pacientes.size) { box.innerHTML = '<div class="empty">Nenhum paciente cadastrado. Use "Novo paciente".</div>'; return; }
+  if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum paciente encontrado.</div>'; return; }
+  box.innerHTML = lista.map(p => {
+    const atual = passagemAtualDe(p.id);
+    const lado = atual && naQuadro(atual)
+      ? `<span class="chip accent">${esc(ETAPA_LABEL[atual.etapa])}</span>`
+      : `${atual ? `<span class="chip ok">Alta ${esc(fmtHora(atual.alta_em))}</span>` : ''}<button type="button" data-chegada="${p.id}">Registrar chegada</button>`;
+    return `<div class="item" data-id="${p.id}"><div><div class="nome">${esc(p.nome)}</div>
+      <div class="meta">Prontuário #${esc(p.id)}${p.status ? ' · ' + esc(p.status) : ''}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">${lado}</div></div>`;
+  }).join('');
+}
+$('#btnPacientes').addEventListener('click', () => {
+  $('#pacienteBusca').value = '';
+  fecharNovoPaciente();
+  renderPacientes(); $('#pacientesOverlay').hidden = false; $('#pacienteBusca').focus();
+  carregarPacientes();   // lista sempre atual, direto do serviço SOAP
+});
+function fecharNovoPaciente() {
+  const f = $('#novoPacienteForm'); f.reset(); f.hidden = true; $('#novoPacienteErro').textContent = '';
+}
+$('#btnNovoPaciente').addEventListener('click', () => {
+  const f = $('#novoPacienteForm'); f.hidden = false;
+  const nome = $('#pacienteBusca').value.trim();
+  if (nome && !/^#?\d+$/.test(nome)) f.elements.nome.value = nome;
+  f.elements.nome.focus();
+});
+$('#novoPacienteCancelar').addEventListener('click', fecharNovoPaciente);
+$('#novoPacienteForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target, btn = f.querySelector('button[type=submit]');
+  $('#novoPacienteErro').textContent = '';
+  btn.disabled = true;
+  try {
+    const p = await api('/pacientes', { method: 'POST', body: JSON.stringify({ nome: f.elements.nome.value, status: f.elements.status.value }) });
+    state.pacientes.set(p.id, p);
+    toast(`${p.nome} cadastrado com o prontuário #${p.id}`, 'ok');
+    fecharNovoPaciente();
+    $('#pacientesOverlay').hidden = true;
+    openDrawerPaciente(p.id);
+  } catch (err) { $('#novoPacienteErro').textContent = err.message; }
+  finally { btn.disabled = false; }
+});
+$('#pacienteBusca').addEventListener('input', renderPacientes);
+$('#pacientesClose').addEventListener('click', () => { $('#pacientesOverlay').hidden = true; });
+$('#pacientesList').addEventListener('click', (e) => {
+  const chegada = e.target.closest('[data-chegada]');
+  const item = e.target.closest('.item'); if (!item) return;
+  $('#pacientesOverlay').hidden = true;
+  const id = Number(item.dataset.id);
+  if (chegada) openDrawerPaciente(id, { tab: 'passagem', form: { doc: 'admissao', editar: false } });
+  else openDrawerPaciente(id);
+});
+
+function atendidosHoje() {
+  return [...state.passagens.values()].map(p => p.d).filter(atendidoHoje)
+    .sort((a, b) => new Date(b.alta_em) - new Date(a.alta_em));
+}
+function atualizarContadores() { $('#atendidosCount').textContent = atendidosHoje().length; }
+function renderAtendidos() {
+  const lista = atendidosHoje();
+  $('#atendidosCount').textContent = lista.length;
+  const box = $('#atendidosList');
+  if (!lista.length) { box.innerHTML = '<div class="empty">Ninguém teve alta hoje ainda.</div>'; return; }
+  box.innerHTML = lista.map(d => `<div class="item" data-id="${d.id}">
+      <div><div class="nome">${esc(d.paciente ? d.paciente.nome : 'Paciente #' + d.paciente_id)}</div>
+        <div class="meta">${esc(d.consulta ? d.consulta.diagnostico : '')}</div></div>
+      <div class="meta">Alta ${esc(fmtHora(d.alta_em))}</div></div>`).join('');
+}
+$('#btnAtendidos').addEventListener('click', () => { renderAtendidos(); $('#atendidosOverlay').hidden = false; });
+$('#atendidosClose').addEventListener('click', () => { $('#atendidosOverlay').hidden = true; });
+$('#atendidosList').addEventListener('click', (e) => {
+  const item = e.target.closest('.item'); if (!item) return;
+  $('#atendidosOverlay').hidden = true;
+  openDrawerPassagem(Number(item.dataset.id));
+});
+
+// =====================================================================
+//  Finalizar plantão
+// =====================================================================
+// Mostra tudo o que o doutor registrou desde a última finalização. Ele pode
+// comentar cada movimentação e o plantão como um todo. Ao confirmar, o
+// servidor encerra a sessão e o doutor é deslogado.
+const TIPO_MOV = {
+  chegada: ['Chegada', 'accent'], nova_chegada: ['Nova chegada', 'accent'], triagem: ['Triagem', ''],
+  consulta: ['Consulta e alta', 'ok'], correcao_admissao: ['Correção da admissão', 'warn'], correcao_triagem: ['Correção da triagem', 'warn'],
+};
+function duracao(ini, fim) {
+  const min = Math.max(0, Math.round((new Date(fim) - new Date(ini)) / 60000));
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${pad(min % 60)}`;
+}
+function plural(n, um, varios) { return `${n} ${n === 1 ? um : varios}`; }
+
+async function abrirFinalizacao() {
+  $('#finalizarErro').textContent = '';
+  $('#finalizarComentario').value = '';
+  $('#finalizarLista').innerHTML = '<div class="empty">Carregando…</div>';
+  $('#finalizarTotais').innerHTML = ''; $('#finalizarSub').textContent = '';
+  $('#finalizarAviso').innerHTML = drawer.form
+    ? '<div class="aviso">Há um formulário aberto no painel que ainda não foi salvo. Ele será descartado se você finalizar agora.</div>' : '';
+  $('#finalizarOverlay').hidden = false;
+  let r;
+  try { r = await api('/finalizacao'); }
+  catch (err) { $('#finalizarLista').innerHTML = `<div class="error">${esc(err.message)}</div>`; return; }
+
+  const ms = r.movimentacoes || [];
+  $('#finalizarSub').textContent = `Plantão de ${fmtHora(r.inicio)} até ${fmtHora(r.fim)} (${duracao(r.inicio, r.fim)}). ` +
+    'Revise o que você registrou e comente o que achar pertinente. Os comentários ficam na passagem do paciente.';
+  const t = r.totais || {};
+  const chips = [
+    plural(r.pacientes || 0, 'paciente', 'pacientes'),
+    plural((t.chegada || 0) + (t.nova_chegada || 0), 'chegada', 'chegadas'),
+    plural(t.triagem || 0, 'triagem', 'triagens'),
+    plural(t.consulta || 0, 'alta', 'altas'),
+  ];
+  const correcoes = (t.correcao_admissao || 0) + (t.correcao_triagem || 0);
+  if (correcoes) chips.push(plural(correcoes, 'correção', 'correções'));
+  $('#finalizarTotais').innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join('');
+
+  if (!ms.length) {
+    $('#finalizarLista').innerHTML = '<div class="empty">Você não registrou nenhuma movimentação neste plantão.</div>';
+    return;
+  }
+  $('#finalizarLista').innerHTML = ms.map(m => {
+    const [rotulo, cls] = TIPO_MOV[m.tipo] || [m.tipo, ''];
+    return `<div class="mov" data-mov="${m.id}"><div class="topo">
+        <span class="hora">${esc(fmtHora(m.em))}</span><span class="chip ${cls}">${esc(rotulo)}</span>
+        <span class="nome">${esc(m.paciente_nome || 'Paciente #' + m.paciente_id)}</span>
+        <button type="button" class="link" data-comentar="${m.id}">Comentar</button></div>
+      <p class="desc">${esc(m.descricao)}</p>
+      <textarea data-comentario="${m.id}" maxlength="2000" placeholder="Comentário sobre esta movimentação" hidden></textarea></div>`;
+  }).join('');
+}
+$('#finalizarLista').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-comentar]'); if (!b) return;
+  const ta = document.querySelector(`textarea[data-comentario="${b.dataset.comentar}"]`);
+  ta.hidden = false; ta.focus(); b.hidden = true;
+});
+$('#btnFinalizar').addEventListener('click', abrirFinalizacao);
+$('#finalizarCancelar').addEventListener('click', () => { $('#finalizarOverlay').hidden = true; });
+$('#finalizarConfirmar').addEventListener('click', async () => {
+  const btn = $('#finalizarConfirmar'); btn.disabled = true;
+  $('#finalizarErro').textContent = '';
+  const comentarios = [...document.querySelectorAll('#finalizarLista textarea[data-comentario]')]
+    .map(ta => ({ movimentacao_id: Number(ta.dataset.comentario), comentario: ta.value.trim() }))
+    .filter(c => c.comentario);
+  try {
+    await api('/finalizacao', { method: 'POST', body: JSON.stringify({ comentario: $('#finalizarComentario').value.trim(), comentarios }) });
+    toast('Plantão finalizado. Até a próxima!', 'ok');
+    logout();
+  } catch (err) { $('#finalizarErro').textContent = err.message; }
+  finally { btn.disabled = false; }
+});
+
+// =====================================================================
+//  Inicialização
+// =====================================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('#finalizarOverlay').hidden) { $('#finalizarOverlay').hidden = true; return; }
+  if (!$('#pacientesOverlay').hidden) { $('#pacientesOverlay').hidden = true; return; }
+  if (!$('#atendidosOverlay').hidden) { $('#atendidosOverlay').hidden = true; return; }
+  if (drawer.form) { soltarCardSegurado(); drawer.form = null; renderDrawer(); return; }
+  if (drawer.open) closeDrawer();
+});
+if (state.token) { $('#login').hidden = true; connect(); }
+</script>
+</body>
+</html>

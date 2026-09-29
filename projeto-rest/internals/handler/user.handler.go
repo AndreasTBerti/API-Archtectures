@@ -20,10 +20,12 @@ func NewUserHandler(repo repository.UserRepository) *UserHandler {
 }
 
 // @Summary         Listar todos os usuários
-// @Description     Retorna uma lista de todos os usuários cadastrados
+// @Description     Retorna uma lista de todos os usuários (doutores) cadastrados
 // @Tags            Users
 // @Produce         json
+// @Security        BearerAuth
 // @Success         200  {array}   model.User
+// @Failure         401  {object}  map[string]string
 // @Router          /users [get]
 func (h *UserHandler) Findall(c *gin.Context) {
 	users, err := h.repo.Findall()
@@ -38,9 +40,11 @@ func (h *UserHandler) Findall(c *gin.Context) {
 // @Description     Busca um único usuário pelo ID fornecido
 // @Tags            Users
 // @Produce         json
+// @Security        BearerAuth
 // @Param           id   path      int  true  "ID do Usuário"
 // @Success         200  {object}  model.User
 // @Failure         400  {object}  map[string]string
+// @Failure         401  {object}  map[string]string
 // @Failure         404  {object}  map[string]string
 // @Router          /users/{id} [get]
 func (h *UserHandler) FindById(c *gin.Context) {
@@ -60,13 +64,16 @@ func (h *UserHandler) FindById(c *gin.Context) {
 }
 
 // @Summary         Criar um usuário
-// @Description     Cria um novo usuário na base de dados
+// @Description     Cria um novo usuário (doutor) na base de dados
 // @Tags            Users
 // @Accept          json
 // @Produce         json
+// @Security        BearerAuth
 // @Param           user body      dto.UserDTO true "Dados do usuário"
 // @Success         201  {object}  model.User
 // @Failure         400  {object}  map[string]string
+// @Failure         401  {object}  map[string]string
+// @Failure         409  {object}  map[string]string
 // @Router          /users [post]
 func (h *UserHandler) Create(c *gin.Context) {
 	var userDTO dto.UserDTO
@@ -77,7 +84,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 	user := model.User{
 		Nome:      userDTO.Nome,
-		Hash_pass: userDTO.Hash_pass,
+		Hash_pass: userDTO.Senha,
 	}
 
 	// Verifica se o usuário já existe no banco de forma otimizada
@@ -86,7 +93,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Usuário já existe"})
 		return
 	}
-	
+
 	createdUser, err := h.repo.Create(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -101,10 +108,12 @@ func (h *UserHandler) Create(c *gin.Context) {
 // @Tags            Users
 // @Accept          json
 // @Produce         json
+// @Security        BearerAuth
 // @Param           id   path      int  true  "ID do Usuário"
 // @Param           user body      dto.UserDTO true "Dados do usuário para atualizar"
 // @Success         200  {object}  model.User
 // @Failure         400  {object}  map[string]string
+// @Failure         401  {object}  map[string]string
 // @Failure         404  {object}  map[string]string
 // @Router          /users/{id} [put]
 func (h *UserHandler) Update(c *gin.Context) {
@@ -129,7 +138,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 
 	existingUser.Nome = userDTO.Nome
-	existingUser.Hash_pass = userDTO.Hash_pass
+	existingUser.Hash_pass = userDTO.Senha // o repositório aplica o hash
 
 	updatedUser, err := h.repo.Update(*existingUser)
 	if err != nil {
@@ -144,9 +153,11 @@ func (h *UserHandler) Update(c *gin.Context) {
 // @Description     Remove um usuário existente pelo ID
 // @Tags            Users
 // @Produce         json
+// @Security        BearerAuth
 // @Param           id   path      int  true  "ID do Usuário"
 // @Success         200  {object}  model.User
 // @Failure         400  {object}  map[string]string
+// @Failure         401  {object}  map[string]string
 // @Failure         404  {object}  map[string]string
 // @Router          /users/{id} [delete]
 func (h *UserHandler) Delete(c *gin.Context) {

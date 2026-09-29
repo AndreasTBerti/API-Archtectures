@@ -1,8 +1,7 @@
 package dto
 
+// UserDTO é o corpo usado para criar/atualizar um usuário (doutor).
 type UserDTO struct {
-	ID uint `json:"id"`
-	Nome string `json:"nome" binding:"required"`
-	Hash_pass string `json: "hash_pass" binding:"required"`
+	Nome  string `json:"nome" binding:"required"`
+	Senha string `json:"senha" binding:"required"`
 }
-

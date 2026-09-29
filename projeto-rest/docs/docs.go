@@ -15,7 +15,266 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/ping": {
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna o doutor dono do token enviado",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Usuário autenticado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Cria um novo doutor (usuário) que poderá fazer login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Registrar doutor",
+                "parameters": [
+                    {
+                        "description": "Nome e senha",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UserDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/token": {
+            "post": {
+                "description": "Fluxo OAuth2 \"password\": valida nome/senha e devolve um JWT Bearer. Aceita JSON {nome, senha} ou form-urlencoded (grant_type=password\u0026username=...\u0026password=...).",
+                "consumes": [
+                    "application/json",
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Obter token (login)",
+                "parameters": [
+                    {
+                        "description": "Credenciais",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OAuthError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OAuthError"
+                        }
+                    }
+                }
+            }
+        },
+        "/finalizacao": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tudo o que o doutor autenticado registrou (chegadas, triagens, consultas, correções) desde a última finalização. É o que ele revisa e comenta antes de finalizar.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Finalização"
+                ],
+                "summary": "Resumo para finalizar o plantão",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PreviaFinalizacao"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Grava a finalização com o comentário geral e os comentários opcionais de cada movimentação, e encerra a sessão do doutor: o token atual deixa de valer e o quadro é desconectado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Finalização"
+                ],
+                "summary": "Finalizar o plantão",
+                "parameters": [
+                    {
+                        "description": "Comentários do doutor",
+                        "name": "finalizacao",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.FinalizarDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Finalizacao"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/finalizacoes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Plantões já finalizados pelo doutor autenticado, do mais recente para o mais antigo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Finalização"
+                ],
+                "summary": "Minhas finalizações",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Finalizacao"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
             "get": {
                 "description": "Responde com pong",
                 "produces": [
@@ -38,23 +297,892 @@ const docTemplate = `{
                 }
             }
         },
-        "/soma/:a/:b": {
+        "/pacientes": {
             "get": {
-                "description": "Soma dois números inteiros",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista os pacientes do serviço SOAP (list_pacientes), em ordem alfabética",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Math"
+                    "Pacientes"
                 ],
-                "summary": "Soma",
+                "summary": "Listar pacientes",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Paciente"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria o paciente no serviço SOAP (criar_paciente). Cadastrar não coloca o paciente no quadro: para isso, registre a chegada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pacientes"
+                ],
+                "summary": "Cadastrar paciente",
+                "parameters": [
+                    {
+                        "description": "Dados do paciente",
+                        "name": "paciente",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PacienteDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Paciente"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pacientes/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Busca um paciente no serviço SOAP (get_paciente)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pacientes"
+                ],
+                "summary": "Buscar paciente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id_paciente no SOAP",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Paciente"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza nome e status no serviço SOAP (atualizar_paciente)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pacientes"
+                ],
+                "summary": "Atualizar paciente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id_paciente no SOAP",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do paciente",
+                        "name": "paciente",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PacienteDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Paciente"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove o paciente no serviço SOAP (remover_paciente) e apaga as passagens e documentos dele no REST. Não é permitido enquanto ele estiver no hospital.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pacientes"
+                ],
+                "summary": "Remover paciente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id_paciente no SOAP",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Paciente"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pacientes/{id}/passagens": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista todas as vindas do paciente ao hospital, com os documentos de cada uma, da mais recente para a mais antiga",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Passagens do paciente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do paciente (local)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Passagem"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Abre a passagem de hoje com a admissão e coloca o card em \"Aguardando triagem\". Se o paciente já teve alta hoje, a passagem do dia é reaberta. Responde 409 se ele já está no hospital.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Registrar chegada",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do paciente (local)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Admissão da chegada",
+                        "name": "admissao",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdmissaoDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Passagem do dia reaberta",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pacientes/{id}/resumo": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Resumo para os doutores baseado só nas passagens encerradas de dias anteriores. A passagem atual nunca entra. Hoje o texto é gerado por regras; o contrato já está pronto para um gerador com IA.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Resumo do paciente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do paciente (local)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResumoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/passagens/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Uma passagem com o paciente e os documentos",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Buscar passagem",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da passagem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/passagens/{id}/admissao": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza a admissão de uma passagem aberta. Não muda a etapa.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Corrigir admissão",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da passagem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Admissão",
+                        "name": "admissao",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdmissaoDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/passagens/{id}/consulta": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Salva a consulta e encerra a passagem: o card sai do quadro e vai para \"Atendidos hoje\". Exige triagem.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Registrar consulta e dar alta",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da passagem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Consulta",
+                        "name": "consulta",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConsultaDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/passagens/{id}/triagem": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Salva a triagem da passagem. Se ela estava em \"aguardando_triagem\", passa para \"aguardando_consulta\". pos_x/pos_y opcionais posicionam o card.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Registrar triagem",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da passagem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Triagem",
+                        "name": "triagem",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TriagemDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Passagem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/quadro": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Passagens abertas (de qualquer dia) mais as de hoje que já tiveram alta. É o mesmo conteúdo que o WebSocket envia no \"init\".",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Passagens"
+                ],
+                "summary": "Quadro",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Passagem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
                         }
                     }
@@ -63,7 +1191,12 @@ const docTemplate = `{
         },
         "/users": {
             "get": {
-                "description": "Retorna uma lista de todos os usuários cadastrados",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna uma lista de todos os usuários (doutores) cadastrados",
                 "produces": [
                     "application/json"
                 ],
@@ -80,11 +1213,25 @@ const docTemplate = `{
                                 "$ref": "#/definitions/model.User"
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
             "post": {
-                "description": "Cria um novo usuário na base de dados",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um novo usuário (doutor) na base de dados",
                 "consumes": [
                     "application/json"
                 ],
@@ -121,12 +1268,35 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/users/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Busca um único usuário pelo ID fornecido",
                 "produces": [
                     "application/json"
@@ -160,6 +1330,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -172,6 +1351,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Atualiza os dados de um usuário existente",
                 "consumes": [
                     "application/json"
@@ -217,6 +1401,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -229,6 +1422,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Remove um usuário existente pelo ID",
                 "produces": [
                     "application/json"
@@ -262,6 +1460,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -276,13 +1483,475 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.UserDTO": {
+        "dto.AdmissaoDTO": {
+            "type": "object",
+            "required": [
+                "forma_chegada",
+                "queixa_principal"
+            ],
+            "properties": {
+                "acompanhante": {
+                    "type": "string"
+                },
+                "convenio": {
+                    "type": "string"
+                },
+                "forma_chegada": {
+                    "type": "string",
+                    "enum": [
+                        "andando",
+                        "cadeira_rodas",
+                        "maca",
+                        "ambulancia"
+                    ],
+                    "example": "andando"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "queixa_principal": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ComentarioMovimentacao": {
+            "type": "object",
+            "properties": {
+                "comentario": {
+                    "type": "string"
+                },
+                "movimentacao_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ConsultaDTO": {
+            "type": "object",
+            "required": [
+                "anamnese",
+                "diagnostico"
+            ],
+            "properties": {
+                "anamnese": {
+                    "type": "string"
+                },
+                "diagnostico": {
+                    "type": "string"
+                },
+                "encaminhamento": {
+                    "type": "string"
+                },
+                "exames_solicitados": {
+                    "type": "string"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "prescricao": {
+                    "type": "string"
+                },
+                "retorno": {
+                    "type": "string",
+                    "example": "2026-10-05"
+                }
+            }
+        },
+        "dto.FinalizarDTO": {
+            "type": "object",
+            "properties": {
+                "comentario": {
+                    "type": "string"
+                },
+                "comentarios": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ComentarioMovimentacao"
+                    }
+                }
+            }
+        },
+        "dto.LoginDTO": {
+            "type": "object",
+            "required": [
+                "nome",
+                "senha"
+            ],
+            "properties": {
+                "nome": {
+                    "type": "string"
+                },
+                "senha": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.OAuthError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid_grant"
+                },
+                "error_description": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PacienteDTO": {
             "type": "object",
             "required": [
                 "nome"
             ],
             "properties": {
-                "hash_pass": {
+                "nome": {
+                    "type": "string",
+                    "example": "Ana Maria"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "em observação"
+                }
+            }
+        },
+        "dto.PreviaFinalizacao": {
+            "type": "object",
+            "properties": {
+                "fim": {
+                    "type": "string"
+                },
+                "inicio": {
+                    "type": "string"
+                },
+                "movimentacoes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Movimentacao"
+                    }
+                },
+                "pacientes": {
+                    "type": "integer"
+                },
+                "totais": {
+                    "description": "Quantas movimentações de cada tipo (chegada, triagem, consulta...)",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "dto.ResumoPassagem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string",
+                    "example": "2026-09-10"
+                },
+                "diagnostico": {
+                    "type": "string"
+                },
+                "encaminhamento": {
+                    "type": "string"
+                },
+                "exames_solicitados": {
+                    "type": "string"
+                },
+                "passagem_id": {
+                    "type": "integer"
+                },
+                "peso": {
+                    "type": "number"
+                },
+                "prescricao": {
+                    "type": "string"
+                },
+                "pressao_arterial": {
+                    "type": "string"
+                },
+                "prioridade": {
+                    "type": "string"
+                },
+                "queixa_principal": {
+                    "type": "string"
+                },
+                "retorno": {
+                    "type": "string"
+                },
+                "saturacao_o2": {
+                    "type": "integer"
+                },
+                "sintomas": {
+                    "type": "string"
+                },
+                "temperatura": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.ResumoResponse": {
+            "type": "object",
+            "properties": {
+                "gerado_por": {
+                    "type": "string",
+                    "example": "regras"
+                },
+                "paciente_id": {
+                    "type": "integer"
+                },
+                "passagens": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ResumoPassagem"
+                    }
+                },
+                "texto": {
+                    "description": "Texto corrido do resumo e quem o gerou (\"regras\" hoje; a IA no futuro)",
+                    "type": "string"
+                },
+                "total_passagens": {
+                    "description": "Quantas passagens anteriores entraram no resumo",
+                    "type": "integer"
+                },
+                "ultima_vinda": {
+                    "type": "string",
+                    "example": "2026-09-10"
+                }
+            }
+        },
+        "dto.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                }
+            }
+        },
+        "dto.TriagemDTO": {
+            "type": "object",
+            "required": [
+                "pressao_arterial",
+                "prioridade",
+                "sintomas",
+                "temperatura"
+            ],
+            "properties": {
+                "altura": {
+                    "type": "number",
+                    "example": 1.75
+                },
+                "frequencia_cardiaca": {
+                    "type": "integer",
+                    "example": 72
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "peso": {
+                    "type": "number",
+                    "example": 70.5
+                },
+                "pos_x": {
+                    "type": "number"
+                },
+                "pos_y": {
+                    "type": "number"
+                },
+                "pressao_arterial": {
+                    "type": "string",
+                    "example": "120/80"
+                },
+                "prioridade": {
+                    "type": "string",
+                    "enum": [
+                        "baixa",
+                        "media",
+                        "alta",
+                        "emergencia"
+                    ],
+                    "example": "media"
+                },
+                "saturacao_o2": {
+                    "type": "integer",
+                    "example": 98
+                },
+                "sintomas": {
+                    "type": "string"
+                },
+                "temperatura": {
+                    "type": "number",
+                    "example": 36.8
+                }
+            }
+        },
+        "dto.UserDTO": {
+            "type": "object",
+            "required": [
+                "nome",
+                "senha"
+            ],
+            "properties": {
+                "nome": {
+                    "type": "string"
+                },
+                "senha": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Admissao": {
+            "type": "object",
+            "properties": {
+                "acompanhante": {
+                    "type": "string"
+                },
+                "atualizada_em": {
+                    "type": "string"
+                },
+                "autor_id": {
+                    "type": "integer"
+                },
+                "convenio": {
+                    "type": "string"
+                },
+                "forma_chegada": {
+                    "description": "andando, cadeira_rodas, maca, ambulancia",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "passagem_id": {
+                    "type": "integer"
+                },
+                "queixa_principal": {
+                    "type": "string"
+                },
+                "registrada_em": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Consulta": {
+            "type": "object",
+            "properties": {
+                "anamnese": {
+                    "type": "string"
+                },
+                "atualizada_em": {
+                    "type": "string"
+                },
+                "autor_id": {
+                    "type": "integer"
+                },
+                "diagnostico": {
+                    "type": "string"
+                },
+                "encaminhamento": {
+                    "type": "string"
+                },
+                "exames_solicitados": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "passagem_id": {
+                    "type": "integer"
+                },
+                "prescricao": {
+                    "type": "string"
+                },
+                "registrada_em": {
+                    "type": "string"
+                },
+                "retorno": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Finalizacao": {
+            "type": "object",
+            "properties": {
+                "comentario": {
+                    "type": "string"
+                },
+                "doutor_id": {
+                    "type": "integer"
+                },
+                "fim": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "inicio": {
+                    "type": "string"
+                },
+                "movimentacoes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Movimentacao"
+                    }
+                }
+            }
+        },
+        "model.Movimentacao": {
+            "type": "object",
+            "properties": {
+                "comentario": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "doutor_id": {
+                    "type": "integer"
+                },
+                "em": {
+                    "type": "string"
+                },
+                "finalizacao_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "paciente_id": {
+                    "type": "integer"
+                },
+                "paciente_nome": {
+                    "type": "string"
+                },
+                "passagem_id": {
+                    "type": "integer"
+                },
+                "tipo": {
+                    "type": "string",
+                    "example": "triagem"
+                }
+            }
+        },
+        "model.Paciente": {
+            "type": "object",
+            "properties": {
+                "atualizado_em": {
+                    "type": "string"
+                },
+                "criado_em": {
                     "type": "string"
                 },
                 "id": {
@@ -290,6 +1959,129 @@ const docTemplate = `{
                 },
                 "nome": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Passagem": {
+            "type": "object",
+            "properties": {
+                "admissao": {
+                    "description": "Documentos desta passagem (nulos enquanto não preenchidos)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Admissao"
+                        }
+                    ]
+                },
+                "alta_em": {
+                    "type": "string"
+                },
+                "atualizada_em": {
+                    "type": "string"
+                },
+                "chegada_em": {
+                    "type": "string"
+                },
+                "comentarios": {
+                    "description": "Comentários que os doutores deixaram sobre esta passagem ao finalizar o plantão",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Movimentacao"
+                    }
+                },
+                "consulta": {
+                    "$ref": "#/definitions/model.Consulta"
+                },
+                "criada_em": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "string",
+                    "example": "2026-09-22"
+                },
+                "etapa": {
+                    "type": "string",
+                    "example": "aguardando_triagem"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "paciente": {
+                    "description": "Paciente é preenchido a partir do SOAP na leitura; não é gravado aqui.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Paciente"
+                        }
+                    ]
+                },
+                "paciente_id": {
+                    "description": "PacienteID é o id_paciente do serviço SOAP (o REST não guarda pacientes).",
+                    "type": "integer"
+                },
+                "passagens_anteriores": {
+                    "description": "Quantas passagens o paciente teve antes desta (calculado na leitura)",
+                    "type": "integer"
+                },
+                "pos_x": {
+                    "description": "Posição do card no quadro (coordenadas lógicas, canto superior esquerdo)",
+                    "type": "number"
+                },
+                "pos_y": {
+                    "type": "number"
+                },
+                "triagem": {
+                    "$ref": "#/definitions/model.Triagem"
+                }
+            }
+        },
+        "model.Triagem": {
+            "type": "object",
+            "properties": {
+                "altura": {
+                    "type": "number"
+                },
+                "atualizada_em": {
+                    "type": "string"
+                },
+                "autor_id": {
+                    "type": "integer"
+                },
+                "frequencia_cardiaca": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "passagem_id": {
+                    "type": "integer"
+                },
+                "peso": {
+                    "type": "number"
+                },
+                "pressao_arterial": {
+                    "type": "string"
+                },
+                "prioridade": {
+                    "description": "baixa, media, alta, emergencia",
+                    "type": "string"
+                },
+                "registrada_em": {
+                    "type": "string"
+                },
+                "saturacao_o2": {
+                    "type": "integer"
+                },
+                "sintomas": {
+                    "type": "string"
+                },
+                "temperatura": {
+                    "type": "number"
                 }
             }
         },
@@ -304,17 +2096,25 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Cole o access_token obtido em POST /auth/token (com ou sem o prefixo \"Bearer \")",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "2.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Projeto REST API",
-	Description:      "Esta é uma API de exemplo utilizando Gin e Swagger.",
+	Description:      "Sistema de controle de pacientes. Os doutores fazem login (OAuth2 password + JWT). Os dados do paciente (cadastro, consulta, alteração, remoção) ficam no serviço SOAP (projeto-soap); este REST guarda os documentos gerados em cada vinda e as finalizações de plantão. Cada vinda do paciente ao hospital é uma passagem (uma por dia) com os seus documentos: a admissão abre a passagem em aguardando_triagem, a triagem leva para aguardando_consulta e a consulta dá alta. O resumo do paciente usa só as passagens anteriores. Quadro em tempo real em GET / (WebSocket em /ws?token=...).",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
